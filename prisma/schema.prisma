@@ -1,0 +1,132 @@
+// NekoBox — Prisma schema
+// The server is zero-knowledge: it stores password *verifiers* (argon2),
+// public keys, and wrapped/encrypted key material — never plaintext files
+// or the user's encryption keys.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  // argon2id hash of the password — used ONLY for authentication.
+  passwordHash String
+
+  // Key hierarchy (KEK / VMK pattern):
+  //   PWK = PBKDF2(password, kdfSalt)   — password key, never stored
+  //   VMK = random vault master key, wrapped under PWK (and under a recovery key)
+  // Everything else (file DEKs, names, RSA private key) is encrypted under VMK,
+  // so changing the password only re-wraps the VMK — no bulk re-encryption.
+  kdfSalt   String
+
+  // VMK wrapped (AES-GCM) under the password-derived key PWK.
+  wrappedVmk   String
+  wrappedVmkIv String
+
+  // VMK wrapped under a key derived from a high-entropy recovery code.
+  // Lets a user who lost their password recover the vault with the code.
+  recoverySalt        String
+  recoveryWrappedVmk  String
+  recoveryWrappedVmkIv String
+
+  // RSA-OAEP public key (SPKI, base64) for sharing — public by design.
+  publicKey String
+
+  // RSA private key (PKCS8), AES-GCM-encrypted under the VMK.
+  encPrivateKey   String
+  encPrivateKeyIv String
+
+  createdAt DateTime @default(now())
+
+  files         File[]
+  folders        Folder[]
+  sharesSent     Share[] @relation("SharesSent")
+  sharesReceived Share[] @relation("SharesReceived")
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Folder name is encrypted under the owner's master key — the server never
+  // learns how the user organises their vault.
+  encName   String
+  encNameIv String
+
+  createdAt DateTime @default(now())
+
+  files File[]
+
+  @@index([ownerId])
+}
+
+model File {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Optional folder grouping (flat, owner-private). Null = vault root.
+  folderId  String?
+  folder    Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  // Object key in the private R2 bucket.
+  storageKey String  @unique
+
+  // Encrypted metadata visible only to the owner's client. The display name
+  // is encrypted too so the server learns nothing about file contents.
+  encName   String
+  encNameIv String
+
+  // Plaintext, non-sensitive metadata used for listing/sorting/quotas.
+  mimeType  String
+  size      Int      // size of the ENCRYPTED blob in bytes
+  createdAt DateTime @default(now())
+
+  // The random per-file Data Encryption Key (DEK, AES-256-GCM), wrapped
+  // (AES-GCM-encrypted) under the owner's VMK.
+  wrappedDek   String
+  wrappedDekIv String
+
+  // Body is encrypted in fixed-size chunks (so huge files never need to fit in
+  // memory at once). contentIv holds the 8-byte base nonce; each chunk's IV is
+  // baseNonce || uint32be(chunkIndex). chunkSize is the plaintext bytes/chunk.
+  contentIv String
+  chunkSize Int @default(0) // 0 = whole-file (legacy); >0 = chunked
+
+  shares Share[]
+
+  @@index([ownerId, createdAt])
+}
+
+model Share {
+  id        String   @id @default(cuid())
+  fileId    String
+  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  fromUserId String
+  fromUser   User    @relation("SharesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+
+  toUserId   String
+  toUser     User    @relation("SharesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  // The file's DEK wrapped with the RECIPIENT's RSA public key (RSA-OAEP).
+  // Only the recipient's private key can unwrap it — the server never can.
+  rsaWrappedDek String
+
+  // The display name, encrypted with the same DEK so the recipient can read
+  // it. (DEK is symmetric; both parties hold it after the share.)
+  encName   String
+  encNameIv String
+
+  createdAt DateTime @default(now())
+
+  @@unique([fileId, toUserId])
+  @@index([toUserId])
+}

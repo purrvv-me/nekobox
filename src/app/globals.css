@@ -1,0 +1,87 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  @apply bg-wbg text-ink antialiased;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+::selection {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+/* Windows 11 style thin scrollbars */
+.w11-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.w11-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.w11-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.34);
+  background-clip: content-box;
+}
+
+@keyframes nb-stripes {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+
+@layer components {
+  /* ─── Buttons ─────────────────────────────────────────────── */
+  .w-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md text-[13px] font-medium
+           transition-[background-color,transform] duration-150
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .w-btn-accent {
+    @apply w-btn bg-accent font-semibold text-white hover:bg-accent-hover active:translate-y-px;
+  }
+  .w-btn-ghost {
+    @apply w-btn border border-line2 bg-nav text-ink hover:bg-[#f0f2f6] active:translate-y-px;
+  }
+
+  /* ─── Inputs ──────────────────────────────────────────────── */
+  .w-input {
+    @apply w-full rounded-[6px] border border-[#d6dae2] bg-white px-3 py-2.5 text-sm text-ink outline-none
+           placeholder:text-[#9aa3ad];
+    border-bottom: 2px solid #b8bdc7;
+  }
+  .w-input:focus {
+    border-bottom-color: #1a1a1a;
+  }
+  .w-label {
+    @apply mb-1.5 block text-xs font-medium text-[#5a5a5a];
+  }
+
+  /* ─── Toolbar icon/pill helpers ───────────────────────────── */
+  .w-toolbtn {
+    @apply flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink transition-colors;
+  }
+  .w-meta {
+    @apply font-mono text-[10.5px] text-sub2;
+  }
+}
