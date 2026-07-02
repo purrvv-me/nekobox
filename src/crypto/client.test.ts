@@ -86,6 +86,69 @@ describe("recovery code", () => {
   });
 });
 
+// End-to-end scenario for the BASE recovery-code path (no email), exercising
+// exactly the production client.ts functions the register + recover flows use:
+// create a vault, upload a file, "forget" the password, restore access using
+// ONLY the recovery code + the server-stored ciphertext, decrypt the file, then
+// set a brand-new password and confirm it still opens everything.
+describe("recovery-code restore flow (end to end)", () => {
+  it("recovers the vault and decrypts a file using only the recovery code", async () => {
+    const ITER = DEFAULT_PBKDF2_ITERATIONS;
+    const originalBytes = te.encode("Q3 financials — strictly confidential ".repeat(40));
+
+    // ── Register (mirrors SessionProvider.register) ──
+    const kdfSalt = newSaltB64();
+    const pwk = await deriveKEK("original-master-pw", kdfSalt, ITER);
+    const vmk = await generateVmk();
+    const serverWrappedVmk = await wrapVmk(pwk, vmk); // stored under password key
+
+    const code = generateRecoveryCode();
+    const recoverySalt = newSaltB64();
+    const rwk = await deriveRecoveryKey(code, recoverySalt);
+    const serverRecoveryWrappedVmk = await wrapVmk(rwk, vmk); // stored under recovery key
+
+    // ── Upload a file (mirrors vaultOps.uploadFile) ──
+    const dek = await generateDek();
+    const { blob, contentIv, chunkSize } = await encryptFileChunked(dek, originalBytes.buffer.slice(0) as ArrayBuffer);
+    const serverWrappedDek = await wrapDekWithMaster(vmk, dek);
+    const serverEncName = await aesEncryptString(vmk, "financials.pdf");
+    const serverBlob = new Uint8Array(await blob.arrayBuffer());
+
+    // ── Password forgotten. All the client has is the recovery code; the
+    //    server holds only ciphertext. A wrong code must NOT unwrap. ──
+    const wrongRwk = await deriveRecoveryKey(generateRecoveryCode(), recoverySalt);
+    await expect(unwrapVmk(wrongRwk, serverRecoveryWrappedVmk)).rejects.toBeTruthy();
+
+    // ── Recover: derive the recovery key from the typed code, unwrap the VMK. ──
+    const typedBack = code.toLowerCase().replace(/-/g, " "); // user retypes loosely
+    const recoveredRwk = await deriveRecoveryKey(typedBack, recoverySalt);
+    const recoveredVmk = await unwrapVmk(recoveredRwk, serverRecoveryWrappedVmk);
+
+    // ── Decrypt the file with the recovered VMK. ──
+    const recoveredDek = await unwrapDekWithMaster(recoveredVmk, serverWrappedDek);
+    const decrypted = new Uint8Array(await decryptFileChunked(recoveredDek, serverBlob.buffer.slice(0) as ArrayBuffer, contentIv, chunkSize));
+    expect(td.decode(decrypted)).toBe(td.decode(originalBytes));
+    expect(await aesDecryptString(recoveredVmk, serverEncName)).toBe("financials.pdf");
+
+    // ── Set a NEW password (mirrors recover-reset), then log in with it. ──
+    const newSalt = newSaltB64();
+    const newPwk = await deriveKEK("brand-new-pw", newSalt, ITER);
+    const reWrappedVmk = await wrapVmk(newPwk, recoveredVmk);
+
+    const loginKek = await deriveKEK("brand-new-pw", newSalt, ITER);
+    const vmkAfterLogin = await unwrapVmk(loginKek, reWrappedVmk);
+    const dekAfter = await unwrapDekWithMaster(vmkAfterLogin, serverWrappedDek);
+    const again = new Uint8Array(await decryptFileChunked(dekAfter, serverBlob.buffer.slice(0) as ArrayBuffer, contentIv, chunkSize));
+    expect(td.decode(again)).toBe(td.decode(originalBytes));
+
+    // The OLD password no longer unwraps the new wrapping.
+    const oldKek = await deriveKEK("original-master-pw", newSalt, ITER);
+    await expect(unwrapVmk(oldKek, reWrappedVmk)).rejects.toBeTruthy();
+    // Original wrapping was under the original salt/pw only.
+    void serverWrappedVmk;
+  });
+});
+
 describe("password change re-wraps VMK only", () => {
   it("keeps data readable after re-wrapping under a new password", async () => {
     const salt = newSaltB64();
