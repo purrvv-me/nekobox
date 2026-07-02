@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     publicKey,
     encPrivateKey,
     encPrivateKeyIv,
+    kdfIterations,
   } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
         email,
         passwordHash,
         kdfSalt,
+        kdfIterations,
         wrappedVmk,
         wrappedVmkIv,
         recoverySalt,

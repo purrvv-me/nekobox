@@ -29,6 +29,11 @@ model User {
   wrappedVmk   String
   wrappedVmkIv String
 
+  // PBKDF2 iterations used for THIS user's password key. Stored per-user so the
+  // cost can be raised for new accounts (default 600k) without breaking existing
+  // ones. Defaults to 200000 for rows created before this field existed.
+  kdfIterations Int @default(200000)
+
   // VMK wrapped under a key derived from a high-entropy recovery code.
   // Lets a user who lost their password recover the vault with the code.
   recoverySalt        String

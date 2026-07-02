@@ -17,6 +17,7 @@ export const registerSchema = z.object({
   publicKey: z.string().min(1),
   encPrivateKey: z.string().min(1),
   encPrivateKeyIv: z.string().min(1),
+  kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
 export const loginSchema = z.object({
@@ -32,6 +33,7 @@ export const changePasswordSchema = z.object({
   kdfSalt: z.string().min(1),
   wrappedVmk: z.string().min(1),
   wrappedVmkIv: z.string().min(1),
+  kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
 export const recoverMaterialSchema = z.object({
@@ -46,6 +48,7 @@ export const recoverResetSchema = z.object({
   kdfSalt: z.string().min(1),
   wrappedVmk: z.string().min(1),
   wrappedVmkIv: z.string().min(1),
+  kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
 export const presignSchema = z.object({

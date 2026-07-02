@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     data: {
       passwordHash: await hashPassword(d.newPassword),
       kdfSalt: d.kdfSalt,
+      kdfIterations: d.kdfIterations,
       wrappedVmk: d.wrappedVmk,
       wrappedVmkIv: d.wrappedVmkIv,
     },

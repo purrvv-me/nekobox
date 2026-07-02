@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   deriveKEK,
+  DEFAULT_PBKDF2_ITERATIONS,
   generateVmk,
   generateWrappedKeypair,
   generateRecoveryCode,
@@ -27,6 +28,7 @@ export interface SessionUser {
 
 interface WrappedMaterial {
   kdfSalt: string;
+  kdfIterations: number;
   wrappedVmk: string;
   wrappedVmkIv: string;
   encPrivateKey: string;
@@ -75,6 +77,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         setUser({ id: data.id, email: data.email });
         materialRef.current = {
           kdfSalt: data.kdfSalt,
+          kdfIterations: data.kdfIterations ?? 200_000,
           wrappedVmk: data.wrappedVmk,
           wrappedVmkIv: data.wrappedVmkIv,
           encPrivateKey: data.encPrivateKey,
@@ -93,7 +96,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   // Derive PWK → unwrap VMK → unwrap RSA private key.
   const hydrateKeys = useCallback(async (password: string, m: WrappedMaterial) => {
-    const pwk = await deriveKEK(password, m.kdfSalt);
+    const pwk = await deriveKEK(password, m.kdfSalt, m.kdfIterations);
     let vmk: CryptoKey;
     try {
       vmk = await unwrapVmk(pwk, { ciphertext: m.wrappedVmk, iv: m.wrappedVmkIv });
@@ -109,7 +112,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (email: string, password: string): Promise<string> => {
     // 1. Random VMK; wrap it under the password key and a recovery key.
     const kdfSalt = newSaltB64();
-    const pwk = await deriveKEK(password, kdfSalt);
+    const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
+    const pwk = await deriveKEK(password, kdfSalt, kdfIterations);
     const vmk = await generateVmk();
     const wrappedVmk = await wrapVmk(pwk, vmk);
 
@@ -128,6 +132,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         kdfSalt,
+        kdfIterations,
         wrappedVmk: wrappedVmk.ciphertext,
         wrappedVmkIv: wrappedVmk.iv,
         recoverySalt,
@@ -146,6 +151,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setUser({ id: data.id, email: data.email });
     materialRef.current = {
       kdfSalt,
+      kdfIterations,
       wrappedVmk: wrappedVmk.ciphertext,
       wrappedVmkIv: wrappedVmk.iv,
       encPrivateKey: kp.encPrivateKey,
@@ -173,6 +179,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setUser({ id: data.id, email: data.email });
       const m: WrappedMaterial = {
         kdfSalt: data.kdfSalt,
+        kdfIterations: data.kdfIterations ?? 200_000,
         wrappedVmk: data.wrappedVmk,
         wrappedVmkIv: data.wrappedVmkIv,
         encPrivateKey: data.encPrivateKey,
@@ -198,7 +205,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (!keys) throw new Error("Vault must be unlocked");
       // Re-wrap the same VMK under a key derived from the new password.
       const kdfSalt = newSaltB64();
-      const newPwk = await deriveKEK(newPassword, kdfSalt);
+      const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
+      const newPwk = await deriveKEK(newPassword, kdfSalt, kdfIterations);
       const wrappedVmk = await wrapVmk(newPwk, keys.masterKey);
 
       const res = await fetch("/api/auth/change-password", {
@@ -208,6 +216,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           currentPassword,
           newPassword,
           kdfSalt,
+          kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
         }),
@@ -220,6 +229,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         materialRef.current = {
           ...materialRef.current,
           kdfSalt,
+          kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
         };

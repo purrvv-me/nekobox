@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     id: user.id,
     email: user.email,
     kdfSalt: user.kdfSalt,
+    kdfIterations: user.kdfIterations,
     wrappedVmk: user.wrappedVmk,
     wrappedVmkIv: user.wrappedVmkIv,
     encPrivateKey: user.encPrivateKey,

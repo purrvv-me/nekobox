@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AuthScene } from "@/components/AuthScene";
 import {
   deriveKEK,
+  DEFAULT_PBKDF2_ITERATIONS,
   deriveRecoveryKey,
   newSaltB64,
   unwrapVmk,
@@ -50,7 +51,8 @@ export default function RecoverPage() {
 
       // 3. Re-wrap the (unchanged) VMK under a key from the NEW password.
       const kdfSalt = newSaltB64();
-      const newPwk = await deriveKEK(password, kdfSalt);
+      const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
+      const newPwk = await deriveKEK(password, kdfSalt, kdfIterations);
       const wrappedVmk = await wrapVmk(newPwk, vmk);
 
       const resetRes = await fetch("/api/auth/recover-reset", {
@@ -60,6 +62,7 @@ export default function RecoverPage() {
           email: email.trim().toLowerCase(),
           newPassword: password,
           kdfSalt,
+          kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
         }),

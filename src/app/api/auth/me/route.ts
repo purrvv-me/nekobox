@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
       id: true,
       email: true,
       kdfSalt: true,
+      kdfIterations: true,
       wrappedVmk: true,
       wrappedVmkIv: true,
       encPrivateKey: true,
