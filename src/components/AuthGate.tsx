@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "./SessionProvider";
 import { AuthScene } from "./AuthScene";
 import { BrandMark } from "./icons";
+import { remainingBackoffMs } from "@/lib/unlockBackoff";
 
 // Renders children only when the vault is unlocked. loading → spinner,
 // anon → redirect to /login, locked → unlock prompt.
@@ -14,10 +15,20 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waitMs, setWaitMs] = useState(0);
 
   useEffect(() => {
     if (status === "anon") router.replace("/login");
   }, [status, router]);
+
+  // Live countdown while a manual-guessing backoff is in effect (UX only).
+  useEffect(() => {
+    if (status !== "locked" || !user) return;
+    const tick = () => setWaitMs(remainingBackoffMs(user.id));
+    tick();
+    const t = setInterval(tick, 500);
+    return () => clearInterval(t);
+  }, [status, user, error]);
 
   if (status === "loading" || status === "anon") {
     return (
@@ -72,8 +83,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
               {error}
             </p>
           )}
-          <button className="w-btn-accent w-full py-2.5" disabled={busy}>
-            {busy ? "Unlocking…" : "Unlock"}
+          <button className="w-btn-accent w-full py-2.5" disabled={busy || waitMs > 0}>
+            {busy ? "Unlocking…" : waitMs > 0 ? `Wait ${Math.ceil(waitMs / 1000)}s…` : "Unlock"}
           </button>
         </form>
       </AuthScene>

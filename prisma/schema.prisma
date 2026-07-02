@@ -54,19 +54,10 @@ model User {
   // jti of the currently valid recovery ticket (one at a time; consumed on use).
   emailTicketJti      String?
 
-  // RSA-OAEP public key (SPKI, base64) for sharing — public by design.
-  publicKey String
-
-  // RSA private key (PKCS8), AES-GCM-encrypted under the VMK.
-  encPrivateKey   String
-  encPrivateKeyIv String
-
   createdAt DateTime @default(now())
 
-  files         File[]
-  folders        Folder[]
-  sharesSent     Share[] @relation("SharesSent")
-  sharesReceived Share[] @relation("SharesReceived")
+  files   File[]
+  folders Folder[]
 }
 
 model Folder {
@@ -119,33 +110,5 @@ model File {
   contentIv String
   chunkSize Int @default(0) // 0 = whole-file (legacy); >0 = chunked
 
-  shares Share[]
-
   @@index([ownerId, createdAt])
-}
-
-model Share {
-  id        String   @id @default(cuid())
-  fileId    String
-  file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
-
-  fromUserId String
-  fromUser   User    @relation("SharesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
-
-  toUserId   String
-  toUser     User    @relation("SharesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
-
-  // The file's DEK wrapped with the RECIPIENT's RSA public key (RSA-OAEP).
-  // Only the recipient's private key can unwrap it — the server never can.
-  rsaWrappedDek String
-
-  // The display name, encrypted with the same DEK so the recipient can read
-  // it. (DEK is symmetric; both parties hold it after the share.)
-  encName   String
-  encNameIv String
-
-  createdAt DateTime @default(now())
-
-  @@unique([fileId, toUserId])
-  @@index([toUserId])
 }

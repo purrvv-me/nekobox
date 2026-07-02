@@ -20,4 +20,3 @@ export * from "./stream";
 export * from "./recovery";
 export * from "./keyset";
 export * from "./sharing";
-export * from "./rsa";

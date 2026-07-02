@@ -35,8 +35,5 @@ export async function POST(req: NextRequest) {
     kdfIterations: user.kdfIterations,
     wrappedVmk: user.wrappedVmk,
     wrappedVmkIv: user.wrappedVmkIv,
-    encPrivateKey: user.encPrivateKey,
-    encPrivateKeyIv: user.encPrivateKeyIv,
-    publicKey: user.publicKey,
   });
 }

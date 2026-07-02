@@ -14,9 +14,6 @@ export const registerSchema = z.object({
   recoverySalt: z.string().min(1),
   recoveryWrappedVmk: z.string().min(1),
   recoveryWrappedVmkIv: z.string().min(1),
-  publicKey: z.string().min(1),
-  encPrivateKey: z.string().min(1),
-  encPrivateKeyIv: z.string().min(1),
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 

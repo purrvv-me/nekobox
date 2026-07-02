@@ -7,10 +7,7 @@ import {
   decryptFileChunked,
   encryptFileChunked,
   generateDek,
-  importPublicKey,
-  unwrapDekFromSender,
   unwrapDekWithMaster,
-  wrapDekForRecipient,
   wrapDekWithMaster,
 } from "./client";
 
@@ -210,90 +207,4 @@ export async function downloadAndDecrypt(
 // ─── Delete ───────────────────────────────────────────────────────────
 export async function deleteFile(fileId: string): Promise<void> {
   await asJson(await fetch(`/api/files/${fileId}`, { method: "DELETE" }));
-}
-
-// ─── Share ────────────────────────────────────────────────────────────
-export async function shareFile(
-  masterKey: CryptoKey,
-  file: DecryptedFile,
-  toEmail: string,
-): Promise<void> {
-  // Find the recipient's public key.
-  const recipient = await asJson(
-    await fetch(`/api/users/lookup?email=${encodeURIComponent(toEmail)}`, { cache: "no-store" }),
-  );
-  const recipientPub = await importPublicKey(recipient.publicKey);
-
-  // Unwrap our DEK, re-wrap it for the recipient, and re-encrypt the name with
-  // the (symmetric) DEK so they can read it without our master key.
-  const dek = await unwrapDekWithMaster(masterKey, {
-    ciphertext: file.wrappedDek,
-    iv: file.wrappedDekIv,
-  });
-  const rsaWrappedDek = await wrapDekForRecipient(recipientPub, dek);
-  const encName = await aesEncryptString(dek, file.name);
-
-  await asJson(
-    await fetch("/api/share", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileId: file.id,
-        toEmail,
-        rsaWrappedDek,
-        encName: encName.ciphertext,
-        encNameIv: encName.iv,
-      }),
-    }),
-  );
-}
-
-// ─── Shared-with-me ───────────────────────────────────────────────────
-export interface SharedItemRaw {
-  id: string;
-  rsaWrappedDek: string;
-  encName: string;
-  encNameIv: string;
-  createdAt: string;
-  fromEmail: string;
-  mimeType: string;
-  size: number;
-  contentIv: string;
-}
-
-export interface SharedItem extends SharedItemRaw {
-  name: string;
-}
-
-export async function listShared(privateKey: CryptoKey): Promise<SharedItem[]> {
-  const { shares } = await asJson(await fetch("/api/share", { cache: "no-store" }));
-  return Promise.all(
-    (shares as SharedItemRaw[]).map(async (s) => {
-      let name = "⚠ undecryptable";
-      try {
-        const dek = await unwrapDekFromSender(privateKey, s.rsaWrappedDek);
-        name = await aesDecryptString(dek, { ciphertext: s.encName, iv: s.encNameIv });
-      } catch {
-        /* keep placeholder */
-      }
-      return { ...s, name };
-    }),
-  );
-}
-
-export async function downloadShared(
-  privateKey: CryptoKey,
-  share: SharedItem,
-): Promise<{ blob: Blob; mimeType: string }> {
-  const meta = await asJson(await fetch(`/api/share/${share.id}`, { cache: "no-store" }));
-  const dek = await unwrapDekFromSender(privateKey, meta.rsaWrappedDek);
-  const res = await fetch(meta.url);
-  if (!res.ok) throw new Error("Could not fetch encrypted blob");
-  const ciphertext = await res.arrayBuffer();
-  const plaintext = await decryptFileChunked(dek, ciphertext, meta.contentIv, meta.chunkSize);
-  return { blob: new Blob([plaintext], { type: meta.mimeType }), mimeType: meta.mimeType };
-}
-
-export async function revokeShare(shareId: string): Promise<void> {
-  await asJson(await fetch(`/api/share/${shareId}`, { method: "DELETE" }));
 }

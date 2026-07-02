@@ -23,9 +23,6 @@ export async function POST(req: NextRequest) {
     recoverySalt,
     recoveryWrappedVmk,
     recoveryWrappedVmkIv,
-    publicKey,
-    encPrivateKey,
-    encPrivateKeyIv,
     kdfIterations,
   } = parsed.data;
 
@@ -47,9 +44,6 @@ export async function POST(req: NextRequest) {
         recoverySalt,
         recoveryWrappedVmk,
         recoveryWrappedVmkIv,
-        publicKey,
-        encPrivateKey,
-        encPrivateKeyIv,
       },
       select: { id: true, email: true },
     });

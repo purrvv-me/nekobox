@@ -18,9 +18,6 @@ export async function GET(req: NextRequest) {
       kdfIterations: true,
       wrappedVmk: true,
       wrappedVmkIv: true,
-      encPrivateKey: true,
-      encPrivateKeyIv: true,
-      publicKey: true,
     },
   });
   if (!user) return unauthorized();

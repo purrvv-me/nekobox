@@ -26,13 +26,6 @@ import {
   generateRecoveryCode as secureGenerateRecoveryCode,
   normalizeRecoveryCode as secureNormalizeRecoveryCode,
 } from "./secure/recovery";
-import {
-  generateWrappedRsaKeypair,
-  importRsaPublicKey,
-  importWrappedRsaPrivateKey,
-  rsaUnwrapAesKey,
-  rsaWrapAesKey,
-} from "./secure/rsa";
 import { importAesKey } from "./secure/aes";
 import { toBase64, fromBase64, randomBytes, randomSaltB64, utf8, fromUtf8 } from "./secure/codec";
 
@@ -99,32 +92,6 @@ export async function aesDecryptString(key: CryptoKey, sealed: Sealed): Promise<
   return fromUtf8(await open(key, toSecure(sealed)));
 }
 
-// ─── RSA keypair for sharing (historical flat shape) ──────────────────
-export interface WrappedKeypair {
-  publicKey: string;
-  encPrivateKey: string;
-  encPrivateKeyIv: string;
-}
-
-export async function generateWrappedKeypair(masterKey: CryptoKey): Promise<WrappedKeypair> {
-  const kp = await generateWrappedRsaKeypair(masterKey);
-  return {
-    publicKey: kp.publicKey,
-    encPrivateKey: kp.encPrivateKey.ct,
-    encPrivateKeyIv: kp.encPrivateKey.iv,
-  };
-}
-
-export async function importPrivateKey(
-  masterKey: CryptoKey,
-  encPrivateKey: string,
-  encPrivateKeyIv: string,
-): Promise<CryptoKey> {
-  return importWrappedRsaPrivateKey(masterKey, { ct: encPrivateKey, iv: encPrivateKeyIv });
-}
-
-export const importPublicKey = importRsaPublicKey;
-
 // ─── Per-file DEK lifecycle ───────────────────────────────────────────
 export async function generateDek(): Promise<CryptoKey> {
   return generateAesKey();
@@ -135,11 +102,8 @@ export async function wrapDekWithMaster(masterKey: CryptoKey, dek: CryptoKey): P
 }
 
 export async function unwrapDekWithMaster(masterKey: CryptoKey, sealed: Sealed): Promise<CryptoKey> {
-  return unwrapKey(masterKey, toSecure(sealed), /* extractable (RSA re-wrap for shares) */ true);
+  return unwrapKey(masterKey, toSecure(sealed), true);
 }
-
-export const wrapDekForRecipient = rsaWrapAesKey;
-export const unwrapDekFromSender = rsaUnwrapAesKey;
 
 // ─── Optional email recovery (ERK) ────────────────────────────────────
 // A random Email Recovery Key wraps the VMK. The ERK is handed to the server

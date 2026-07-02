@@ -13,11 +13,6 @@ import {
   unwrapDekWithMaster,
   aesEncryptString,
   aesDecryptString,
-  generateWrappedKeypair,
-  importPrivateKey,
-  importPublicKey,
-  wrapDekForRecipient,
-  unwrapDekFromSender,
   encryptFileChunked,
   decryptFileChunked,
   deriveMasterKey,
@@ -173,22 +168,6 @@ describe("password change re-wraps VMK only", () => {
     const probe = await aesEncryptString(dek, "x");
     expect(await aesDecryptString(dekAfter, probe)).toBe("x");
     expect(await aesDecryptString(vmkAfter, name)).toBe("report.pdf");
-  });
-});
-
-describe("RSA sharing", () => {
-  it("wraps a DEK for a recipient and only they can unwrap it", async () => {
-    const vmk = await generateVmk();
-    const recipient = await generateWrappedKeypair(vmk);
-    const pub = await importPublicKey(recipient.publicKey);
-    const priv = await importPrivateKey(vmk, recipient.encPrivateKey, recipient.encPrivateKeyIv);
-
-    const dek = await generateDek();
-    const rsaWrapped = await wrapDekForRecipient(pub, dek);
-    const dek2 = await unwrapDekFromSender(priv, rsaWrapped);
-
-    const probe = await aesEncryptString(dek, "shared file");
-    expect(await aesDecryptString(dek2, probe)).toBe("shared file");
   });
 });
 

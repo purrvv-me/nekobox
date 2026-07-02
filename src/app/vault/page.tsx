@@ -6,7 +6,6 @@ import { AuthGate } from "@/components/AuthGate";
 import { NavPane, QuickItem } from "@/components/NavPane";
 import { ContextMenu, MenuItem } from "@/components/ContextMenu";
 import { FolderIcon, FileTypeIcon, BrandMark } from "@/components/icons";
-import { ShareModal } from "@/components/ShareModal";
 import { PreviewModal } from "@/components/PreviewModal";
 import { EncryptingModal } from "@/components/EncryptingModal";
 import { NewFolderModal } from "@/components/NewFolderModal";
@@ -59,7 +58,6 @@ function VaultInner() {
   const [dropFolderId, setDropFolderId] = useState<string | null>(null);
 
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [shareTarget, setShareTarget] = useState<DecryptedFile | null>(null);
   const [previewTarget, setPreviewTarget] = useState<DecryptedFile | null>(null);
   const [moveTarget, setMoveTarget] = useState<DecryptedFile | null>(null);
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
@@ -258,7 +256,7 @@ function VaultInner() {
   );
 
   const anyDialogOpen =
-    showNewFolder || showSettings || !!renameTarget || !!moveTarget || !!shareTarget || !!previewTarget;
+    showNewFolder || showSettings || !!renameTarget || !!moveTarget || !!previewTarget;
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────
   useEffect(() => {
@@ -346,7 +344,6 @@ function VaultInner() {
       { divider: true, label: "" },
       { label: "Rename", icon: "✏️", hint: "F2", onClick: () => setRenameTarget({ kind: "file", id: file.id, name: file.name }) },
       { label: "Move to…", icon: "📂", onClick: () => setMoveTarget(file) },
-      { label: "Share", icon: "↗", onClick: () => setShareTarget(file) },
       { divider: true, label: "" },
       { label: "Delete", icon: "🗑", hint: "Del", danger: true, onClick: () => bulkDelete([file.id]) },
     ];
@@ -379,7 +376,6 @@ function VaultInner() {
 
   const quick: QuickItem[] = [
     { key: "all", label: "All files", icon: "🗂️", count: files.length, active: atRoot, onClick: () => setSelectedFolderId(null) },
-    { key: "shared", label: "Shared with me", icon: "👥", active: false, href: "/shared" },
   ];
 
   const toggleSort = (key: SortKey) =>
@@ -410,7 +406,6 @@ function VaultInner() {
           <div className="mx-1.5 h-[22px] w-px bg-line2" />
           <CmdBtn label="Preview" icon="👁" disabled={!onePreviewable} onClick={() => onePreviewable && openFile(selFiles[0])} />
           <CmdBtn label="Download" icon="⬇" disabled={noFileSel} onClick={() => selFiles.forEach(handleDownload)} />
-          <CmdBtn label="Share" icon="↗" disabled={selFiles.length !== 1} onClick={() => selFiles.length === 1 && setShareTarget(selFiles[0])} />
           <CmdBtn label="Delete" icon="🗑" danger disabled={selectionSize === 0} onClick={() => bulkDelete([...selectedIds])} />
           <div className="flex-1" />
           <div className="flex h-8 overflow-hidden rounded-md border border-line2">
@@ -559,7 +554,6 @@ function VaultInner() {
         <RenameModal title={renameTarget.kind === "folder" ? "Rename folder" : "Rename file"} initial={renameTarget.name} onClose={() => setRenameTarget(null)} onSubmit={async (name) => { if (renameTarget.kind === "folder") await renameFolder(masterKey, renameTarget.id, name); else await renameFile(masterKey, renameTarget.id, name); await refresh(); }} />
       )}
       {moveTarget && <MoveModal fileName={moveTarget.name} folders={folders} currentFolderId={moveTarget.folderId ?? null} onClose={() => setMoveTarget(null)} onMove={async (folderId) => { await moveFile(moveTarget.id, folderId); await refresh(); }} />}
-      {shareTarget && <ShareModal file={shareTarget} masterKey={masterKey} onClose={() => setShareTarget(null)} onShared={() => {}} />}
       {previewTarget && <PreviewModal name={previewTarget.name} mimeType={previewTarget.mimeType} size={previewTarget.size} load={() => downloadAndDecrypt(masterKey, previewTarget.id)} onClose={() => setPreviewTarget(null)} />}
     </div>
   );

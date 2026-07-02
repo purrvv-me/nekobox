@@ -13,14 +13,13 @@ import {
   deriveKEK,
   DEFAULT_PBKDF2_ITERATIONS,
   generateVmk,
-  generateWrappedKeypair,
   generateRecoveryCode,
   deriveRecoveryKey,
-  importPrivateKey,
   newSaltB64,
   unwrapVmk,
   wrapVmk,
 } from "@/crypto/client";
+import { remainingBackoffMs, recordUnlockFailure, recordUnlockSuccess } from "@/lib/unlockBackoff";
 
 export interface SessionUser {
   id: string;
@@ -32,17 +31,12 @@ interface WrappedMaterial {
   kdfIterations: number;
   wrappedVmk: string;
   wrappedVmkIv: string;
-  encPrivateKey: string;
-  encPrivateKeyIv: string;
-  publicKey: string;
 }
 
 type Status = "loading" | "anon" | "locked" | "unlocked";
 
 interface Keys {
   masterKey: CryptoKey; // the VMK — everything is encrypted under this
-  privateKey: CryptoKey;
-  publicKey: string;
 }
 
 interface SessionContextValue {
@@ -83,9 +77,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           kdfIterations: data.kdfIterations ?? 200_000,
           wrappedVmk: data.wrappedVmk,
           wrappedVmkIv: data.wrappedVmkIv,
-          encPrivateKey: data.encPrivateKey,
-          encPrivateKeyIv: data.encPrivateKeyIv,
-          publicKey: data.publicKey,
         };
         setStatus("locked");
       } catch {
@@ -97,7 +88,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Derive PWK → unwrap VMK → unwrap RSA private key.
+  // Derive PWK → unwrap the VMK.
   const hydrateKeys = useCallback(async (password: string, m: WrappedMaterial) => {
     const pwk = await deriveKEK(password, m.kdfSalt, m.kdfIterations);
     let vmk: CryptoKey;
@@ -106,8 +97,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } catch {
       throw new Error("Incorrect password — could not unlock your vault.");
     }
-    const privateKey = await importPrivateKey(vmk, m.encPrivateKey, m.encPrivateKeyIv);
-    setKeys({ masterKey: vmk, privateKey, publicKey: m.publicKey });
+    setKeys({ masterKey: vmk });
     setStatus("unlocked");
     return vmk;
   }, []);
@@ -125,9 +115,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const rwk = await deriveRecoveryKey(recoveryCode, recoverySalt);
     const recoveryWrappedVmk = await wrapVmk(rwk, vmk);
 
-    // 2. RSA keypair for sharing, private key wrapped under the VMK.
-    const kp = await generateWrappedKeypair(vmk);
-
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -141,9 +128,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         recoverySalt,
         recoveryWrappedVmk: recoveryWrappedVmk.ciphertext,
         recoveryWrappedVmkIv: recoveryWrappedVmk.iv,
-        publicKey: kp.publicKey,
-        encPrivateKey: kp.encPrivateKey,
-        encPrivateKeyIv: kp.encPrivateKeyIv,
       }),
     });
     if (!res.ok) {
@@ -157,12 +141,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       kdfIterations,
       wrappedVmk: wrappedVmk.ciphertext,
       wrappedVmkIv: wrappedVmk.iv,
-      encPrivateKey: kp.encPrivateKey,
-      encPrivateKeyIv: kp.encPrivateKeyIv,
-      publicKey: kp.publicKey,
     };
-    const privateKey = await importPrivateKey(vmk, kp.encPrivateKey, kp.encPrivateKeyIv);
-    setKeys({ masterKey: vmk, privateKey, publicKey: kp.publicKey });
+    setKeys({ masterKey: vmk });
     setStatus("unlocked");
     return recoveryCode;
   }, []);
@@ -185,9 +165,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         kdfIterations: data.kdfIterations ?? 200_000,
         wrappedVmk: data.wrappedVmk,
         wrappedVmkIv: data.wrappedVmkIv,
-        encPrivateKey: data.encPrivateKey,
-        encPrivateKeyIv: data.encPrivateKeyIv,
-        publicKey: data.publicKey,
       };
       materialRef.current = m;
       await hydrateKeys(password, m);
@@ -198,9 +175,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const unlock = useCallback(
     async (password: string) => {
       if (!materialRef.current) throw new Error("No session to unlock");
-      await hydrateKeys(password, materialRef.current);
+      const id = user?.id ?? "vault";
+      const wait = remainingBackoffMs(id);
+      if (wait > 0) throw new Error(`Too many attempts. Wait ${Math.ceil(wait / 1000)}s and try again.`);
+      try {
+        await hydrateKeys(password, materialRef.current);
+        recordUnlockSuccess(id);
+      } catch (e) {
+        recordUnlockFailure(id); // UX-only: slows manual guessing on this device
+        throw e;
+      }
     },
-    [hydrateKeys],
+    [hydrateKeys, user],
   );
 
   const changePassword = useCallback(
