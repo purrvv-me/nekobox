@@ -20,6 +20,8 @@ import {
   unwrapDekFromSender,
   encryptFileChunked,
   decryptFileChunked,
+  deriveMasterKey,
+  DEFAULT_PBKDF2_ITERATIONS,
   bufToB64,
   b64ToBuf,
 } from "./client";
@@ -58,7 +60,8 @@ describe("KEK / VMK hierarchy", () => {
 describe("recovery code", () => {
   it("normalizes formatting and recovers the VMK", async () => {
     const code = generateRecoveryCode();
-    expect(code).toMatch(/^[A-Z2-7]{5}(-[A-Z2-7]+)+$/);
+    // Stage-1 format: Crockford base32 (no I/L/O/U), dash-grouped by 4.
+    expect(code).toMatch(/^[0-9A-Z]{4}(-[0-9A-Z]{4})+$/);
     const recSalt = newSaltB64();
     const rwk = await deriveRecoveryKey(code, recSalt);
     const vmk = await generateVmk();
@@ -76,8 +79,10 @@ describe("recovery code", () => {
     expect(await aesDecryptString(dek2, probe)).toBe("secret");
   });
 
-  it("normalizeRecoveryCode strips noise", () => {
-    expect(normalizeRecoveryCode("abc de-fg hi")).toBe("ABCDEFGHI");
+  it("normalizeRecoveryCode strips noise and maps look-alikes", () => {
+    // Stage-1 (Crockford) semantics: uppercase, strip spaces/dashes, I/L→1, O→0.
+    expect(normalizeRecoveryCode("abcd-efgh")).toBe("ABCDEFGH");
+    expect(normalizeRecoveryCode("i o l 0")).toBe(normalizeRecoveryCode("1010"));
   });
 });
 
@@ -158,6 +163,57 @@ describe("chunked file encryption", () => {
     const ct = new Uint8Array(await blob.arrayBuffer());
     ct[0] ^= 0xff; // flip a byte
     await expect(decryptFileChunked(dek, ct.buffer.slice(0) as ArrayBuffer, contentIv, chunkSize)).rejects.toBeTruthy();
+  });
+
+  // M2: chunk index + final flag are bound into the AAD.
+  it("detects truncation (a dropped final chunk)", async () => {
+    const dek = await generateDek();
+    const data = new Uint8Array(48).map((_, i) => i); // exactly 3 chunks of 16
+    const { blob, contentIv, chunkSize } = await encryptFileChunked(dek, data.buffer.slice(0) as ArrayBuffer, 16);
+    const full = new Uint8Array(await blob.arrayBuffer());
+    const truncated = full.slice(0, full.length - (16 + 16)); // drop last encrypted chunk
+    await expect(
+      decryptFileChunked(dek, truncated.buffer.slice(0) as ArrayBuffer, contentIv, chunkSize),
+    ).rejects.toBeTruthy();
+  });
+
+  it("detects reordering of chunks", async () => {
+    const dek = await generateDek();
+    const data = new Uint8Array(48).map((_, i) => i);
+    const { blob, contentIv, chunkSize } = await encryptFileChunked(dek, data.buffer.slice(0) as ArrayBuffer, 16);
+    const ct = new Uint8Array(await blob.arrayBuffer());
+    const HEADER = 17; // Stage-1 NBX1 stream header precedes the frames
+    const enc = 16 + 16;
+    // swap encrypted chunk 0 and chunk 1 (frames start after the header)
+    const c0 = ct.slice(HEADER, HEADER + enc);
+    const c1 = ct.slice(HEADER + enc, HEADER + enc * 2);
+    ct.set(c1, HEADER);
+    ct.set(c0, HEADER + enc);
+    await expect(
+      decryptFileChunked(dek, ct.buffer.slice(0) as ArrayBuffer, contentIv, chunkSize),
+    ).rejects.toBeTruthy();
+  });
+});
+
+describe("PBKDF2 iterations (M1)", () => {
+  it("defaults to the OWASP 600k floor", () => {
+    expect(DEFAULT_PBKDF2_ITERATIONS).toBe(600_000);
+  });
+
+  it("a per-user iteration count round-trips (same count → interoperable key)", async () => {
+    const salt = newSaltB64();
+    const k1 = await deriveMasterKey("pw", salt, 120_000);
+    const k2 = await deriveMasterKey("pw", salt, 120_000);
+    const sealed = await aesEncryptString(k1, "hi");
+    expect(await aesDecryptString(k2, sealed)).toBe("hi");
+  });
+
+  it("different iteration counts derive different, non-interoperable keys", async () => {
+    const salt = newSaltB64();
+    const kOld = await deriveMasterKey("pw", salt, 200_000);
+    const kNew = await deriveMasterKey("pw", salt, 600_000);
+    const sealed = await aesEncryptString(kOld, "hi");
+    await expect(aesDecryptString(kNew, sealed)).rejects.toBeTruthy();
   });
 });
 
