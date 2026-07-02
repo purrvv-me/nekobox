@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Never send a Referer (defence-in-depth so a share URL's #fragment can
+         never leak via outbound navigations). Fragments are already excluded
+         from Referer by spec, but this makes the intent explicit. -->
+    <meta name="referrer" content="no-referrer" />
+    <title>NekoBox Explorer — Stage 3</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

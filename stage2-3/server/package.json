@@ -1,0 +1,25 @@
+{
+  "name": "nekobox-dumb-storage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stage 2 — minimal zero-knowledge blob storage backend (Express).",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "smoke": "tsx test/smoke.ts",
+    "smoke:share": "tsx test/share.smoke.ts",
+    "smoke:limits": "tsx test/limits.smoke.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.16.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.2"
+  }
+}
