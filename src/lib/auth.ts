@@ -1,5 +1,4 @@
 import "server-only";
-import argon2 from "argon2";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
@@ -18,23 +17,8 @@ function ttlSeconds(): number {
   return Number(process.env.JWT_TTL_SECONDS ?? 60 * 60 * 24 * 7);
 }
 
-// ─── Password hashing (auth only, never used for encryption) ──────────
-export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 19456, // 19 MiB
-    timeCost: 2,
-    parallelism: 1,
-  });
-}
-
-export async function verifyPassword(hash: string, password: string): Promise<boolean> {
-  try {
-    return await argon2.verify(hash, password);
-  } catch {
-    return false;
-  }
-}
+// Password hashing lives in a Next-free module so it can be unit-tested.
+export { hashPassword, verifyPassword, verifyPasswordDummy } from "./password";
 
 // ─── JWT session tokens ───────────────────────────────────────────────
 export interface SessionClaims {

@@ -3,7 +3,7 @@
 // vault's PUBLIC auth key, plus per-file metadata (encrypted name, size, time).
 
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open as fsOpen, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -12,6 +12,7 @@ import type { Readable } from "node:stream";
 const DATA_DIR = fileURLToPath(new URL("../data", import.meta.url));
 const BLOB_DIR = join(DATA_DIR, "blobs");
 const META_FILE = join(DATA_DIR, "meta.json");
+const LOCK_FILE = join(DATA_DIR, "meta.lock");
 
 export interface VaultRecord {
   authPublicKey: string; // base64 SPKI of an ECDSA P-256 public key (NOT a secret)
@@ -61,6 +62,50 @@ export async function initStore(): Promise<void> {
 
 async function persist(): Promise<void> {
   await writeFile(META_FILE, JSON.stringify(db, null, 2));
+}
+
+async function reload(): Promise<void> {
+  try {
+    db = JSON.parse(await readFile(META_FILE, "utf8"));
+    db.vaults ??= {};
+    db.files ??= {};
+    db.shares ??= {};
+  } catch {
+    /* keep current in-memory state if the file isn't readable */
+  }
+}
+
+// Serialize a critical section both in-process (a promise chain) and across
+// processes sharing this data dir (an exclusive O_CREAT|O_EXCL lock file). Used
+// to make one-time share-open consumption atomic even under concurrent /
+// multi-instance requests — without swapping the JSON store for a real DB.
+let lockChain: Promise<unknown> = Promise.resolve();
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = lockChain.then(() => fileLocked(fn));
+  lockChain = run.catch(() => {});
+  return run;
+}
+
+async function fileLocked<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    let handle;
+    try {
+      handle = await fsOpen(LOCK_FILE, "wx"); // fails if the lock already exists
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      if (attempt > 400) throw new Error("store lock timeout");
+      await sleep(10);
+      continue;
+    }
+    try {
+      return await fn();
+    } finally {
+      await handle.close();
+      await rm(LOCK_FILE, { force: true });
+    }
+  }
 }
 
 // ─── vaults (public key only) ─────────────────────────────────────────
@@ -145,14 +190,21 @@ export async function setShareSize(id: string, size: number): Promise<void> {
   db.shares[id].size = size;
   await persist();
 }
-/** Atomically consume one open. Returns false if the limit is already reached. */
+/**
+ * Atomically consume one open. Returns false if the limit is already reached.
+ * Runs inside a cross-process file lock and re-reads the metadata from disk, so
+ * a one-time link can't be spent twice by concurrent or multi-instance requests.
+ */
 export async function consumeShareOpen(id: string): Promise<boolean> {
-  const s = db.shares[id];
-  if (!s) return false;
-  if (s.maxOpens !== null && s.opens >= s.maxOpens) return false;
-  s.opens += 1;
-  await persist();
-  return true;
+  return withLock(async () => {
+    await reload(); // pick up writes from other processes before deciding
+    const s = db.shares[id];
+    if (!s) return false;
+    if (s.maxOpens !== null && s.opens >= s.maxOpens) return false;
+    s.opens += 1;
+    await persist();
+    return true;
+  });
 }
 export async function deleteShare(id: string): Promise<void> {
   delete db.shares[id];

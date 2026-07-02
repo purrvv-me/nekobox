@@ -49,6 +49,16 @@ async function main() {
   // 4. Second open must fail — one-time limit reached.
   assert.equal((await fetch(`${BASE}/shares/${share.id}`)).status, 410, "second open blocked");
 
+  // 4b. Concurrency: a fresh one-time link opened 8x in parallel yields exactly
+  // one success (atomic consumption, no double-use).
+  let r2 = await createShare(auth, { "x-max-opens": "1" }, blob);
+  const oneTime = (await r2.json()) as any;
+  const results = await Promise.all(
+    Array.from({ length: 8 }, () => fetch(`${BASE}/shares/${oneTime.id}`).then((x) => x.status)),
+  );
+  assert.equal(results.filter((s) => s === 200).length, 1, "exactly one concurrent open succeeds");
+  assert.equal(results.filter((s) => s === 410).length, 7, "the rest are rejected");
+
   // 5. Expiry: create with a 1-second TTL, wait, then it's gone.
   r = await createShare(auth, { "x-ttl-seconds": "1" }, blob);
   const expiring = (await r.json()) as any;

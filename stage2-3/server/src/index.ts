@@ -64,7 +64,22 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use(cors({ exposedHeaders: ["X-Enc-Name"] }));
+// Restrict CORS to the known web-app origin(s). Set ALLOWED_ORIGINS to a
+// comma-separated list in production. Requests with no Origin (curl, the smoke
+// tests, same-origin) are allowed through.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173,http://localhost:4173")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      cb(new Error("Origin not allowed by CORS"));
+    },
+    exposedHeaders: ["X-Enc-Name"],
+  }),
+);
 app.use(express.json({ limit: "64kb" })); // only touches application/json bodies
 
 const asyncH =

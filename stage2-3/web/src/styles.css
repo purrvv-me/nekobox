@@ -1,5 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
-
+/* No third-party font requests: a self-contained system monospace stack keeps
+   the anonymous share-recipient page from leaking the visitor's IP to a CDN. */
 :root {
   --ink: #1b1b1b; --accent: #1a1a1a; --sub: #6a6a6a; --sub2: #9aa0a8; --faint: #a3a8b0;
   --line: #eceef3; --line2: #e0e3ea; --line3: #e3e6ec; --mica: #f7f8fb; --nav: #fafbfc;
@@ -11,7 +11,7 @@ body {
   font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--ink); background: var(--bg); overflow: hidden; -webkit-font-smoothing: antialiased;
 }
-.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
 .muted { color: var(--sub); font-size: 13px; }
 .center { text-align: center; }
 .pad { padding: 20px; }

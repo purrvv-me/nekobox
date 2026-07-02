@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createSessionToken, setSessionCookie } from "@/lib/auth";
+import { verifyPassword, verifyPasswordDummy, createSessionToken, setSessionCookie } from "@/lib/auth";
 import { loginSchema } from "@/lib/validation";
 import { ok, error } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
@@ -17,8 +17,11 @@ export async function POST(req: NextRequest) {
   const { email, password } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  // Generic error + always run a verify to reduce user-enumeration / timing.
-  const valid = user ? await verifyPassword(user.passwordHash, password) : false;
+  // Always perform an argon2 verify (real hash or a dummy) so the response time
+  // doesn't reveal whether the account exists.
+  let valid = false;
+  if (user) valid = await verifyPassword(user.passwordHash, password);
+  else await verifyPasswordDummy(password);
   if (!user || !valid) return error("Invalid email or password", 401);
 
   const token = await createSessionToken({ sub: user.id, email: user.email });
