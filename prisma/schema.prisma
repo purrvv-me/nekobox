@@ -40,6 +40,20 @@ model User {
   recoveryWrappedVmk  String
   recoveryWrappedVmkIv String
 
+  // OPTIONAL email recovery (off by default; explicit opt-in with a warning).
+  // The email itself is never stored — only HMAC(emailHashKey, email).
+  // ERK = a random email-recovery key generated client-side; the VMK is
+  // wrapped under it. Storing the ERK server-side is a DOCUMENTED, deliberate
+  // zero-knowledge trade-off: server material + control of the mailbox
+  // together (or a malicious operator alone) can recover the VMK. The UI
+  // warns about exactly this before opting in.
+  recoveryEmailHash   String? @unique
+  emailErk            String?
+  emailWrappedVmk     String?
+  emailWrappedVmkIv   String?
+  // jti of the currently valid recovery ticket (one at a time; consumed on use).
+  emailTicketJti      String?
+
   // RSA-OAEP public key (SPKI, base64) for sharing — public by design.
   publicKey String
 

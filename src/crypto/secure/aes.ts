@@ -20,11 +20,12 @@ export async function generateAesKey(): Promise<CryptoKey> {
 }
 
 /** Import 32 raw bytes as an AES-256-GCM key. */
-export async function importAesKey(raw: Uint8Array, extractable = false): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", bs(raw), { name: "AES-GCM" }, extractable, [
-    "encrypt",
-    "decrypt",
-  ]);
+export async function importAesKey(
+  raw: Uint8Array,
+  extractable = false,
+  usages: KeyUsage[] = ["encrypt", "decrypt"],
+): Promise<CryptoKey> {
+  return crypto.subtle.importKey("raw", bs(raw), { name: "AES-GCM" }, extractable, usages);
 }
 
 /** Encrypt bytes; a random 96-bit IV is generated and returned. */

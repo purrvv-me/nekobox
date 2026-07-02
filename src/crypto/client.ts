@@ -33,7 +33,8 @@ import {
   rsaUnwrapAesKey,
   rsaWrapAesKey,
 } from "./secure/rsa";
-import { toBase64, fromBase64, randomSaltB64, utf8, fromUtf8 } from "./secure/codec";
+import { importAesKey } from "./secure/aes";
+import { toBase64, fromBase64, randomBytes, randomSaltB64, utf8, fromUtf8 } from "./secure/codec";
 
 // ─── base64 helpers (historical names) ────────────────────────────────
 export const bufToB64 = toBase64;
@@ -139,6 +140,34 @@ export async function unwrapDekWithMaster(masterKey: CryptoKey, sealed: Sealed):
 
 export const wrapDekForRecipient = rsaWrapAesKey;
 export const unwrapDekFromSender = rsaUnwrapAesKey;
+
+// ─── Optional email recovery (ERK) ────────────────────────────────────
+// A random Email Recovery Key wraps the VMK. The ERK is handed to the server
+// (documented ZK trade-off): the server releases it only after the user proves
+// control of the linked mailbox via a signed, single-use ticket. The email
+// itself never decrypts anything directly.
+
+export interface EmailRecoveryMaterial {
+  erk: string; // base64 raw key — server-held
+  emailWrappedVmk: string;
+  emailWrappedVmkIv: string;
+}
+
+export async function createEmailRecoveryMaterial(vmk: CryptoKey): Promise<EmailRecoveryMaterial> {
+  const raw = randomBytes(32);
+  const erkKey = await importAesKey(raw, false, ["wrapKey", "unwrapKey"]);
+  const wrapped = await wrapKey(erkKey, vmk);
+  return { erk: toBase64(raw), emailWrappedVmk: wrapped.ct, emailWrappedVmkIv: wrapped.iv };
+}
+
+export async function unwrapVmkWithErk(
+  erkB64: string,
+  emailWrappedVmk: string,
+  emailWrappedVmkIv: string,
+): Promise<CryptoKey> {
+  const erkKey = await importAesKey(fromBase64(erkB64), false, ["wrapKey", "unwrapKey"]);
+  return unwrapKey(erkKey, { ct: emailWrappedVmk, iv: emailWrappedVmkIv }, true);
+}
 
 // ─── Chunked file encryption (Stage-1 stream format) ──────────────────
 export const CHUNK_SIZE = DEFAULT_CHUNK_SIZE;

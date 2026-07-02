@@ -195,6 +195,28 @@ describe("chunked file encryption", () => {
   });
 });
 
+describe("email recovery material (ERK)", () => {
+  it("wraps the VMK under a random ERK and recovers it", async () => {
+    const { createEmailRecoveryMaterial, unwrapVmkWithErk } = await import("./client");
+    const vmk = await generateVmk();
+    const probe = await aesEncryptString(vmk, "vault data");
+
+    const mat = await createEmailRecoveryMaterial(vmk);
+    const vmk2 = await unwrapVmkWithErk(mat.erk, mat.emailWrappedVmk, mat.emailWrappedVmkIv);
+    expect(await aesDecryptString(vmk2, probe)).toBe("vault data");
+  });
+
+  it("a wrong ERK cannot unwrap the VMK", async () => {
+    const { createEmailRecoveryMaterial, unwrapVmkWithErk } = await import("./client");
+    const vmk = await generateVmk();
+    const mat = await createEmailRecoveryMaterial(vmk);
+    const other = await createEmailRecoveryMaterial(vmk);
+    await expect(
+      unwrapVmkWithErk(other.erk, mat.emailWrappedVmk, mat.emailWrappedVmkIv),
+    ).rejects.toBeTruthy();
+  });
+});
+
 describe("PBKDF2 iterations (M1)", () => {
   it("defaults to the OWASP 600k floor", () => {
     expect(DEFAULT_PBKDF2_ITERATIONS).toBe(600_000);

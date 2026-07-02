@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import {
+  createEmailRecoveryMaterial,
   deriveKEK,
   DEFAULT_PBKDF2_ITERATIONS,
   generateVmk,
@@ -52,6 +53,8 @@ interface SessionContextValue {
   login: (email: string, password: string) => Promise<void>;
   unlock: (password: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  /** Opt-in: link an email as a backup recovery path (requires unlocked vault). */
+  bindEmailRecovery: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -238,6 +241,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     [keys],
   );
 
+  const bindEmailRecovery = useCallback(
+    async (email: string) => {
+      if (!keys) throw new Error("Vault must be unlocked");
+      const mat = await createEmailRecoveryMaterial(keys.masterKey);
+      const res = await fetch("/api/auth/email-recovery/bind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, ...mat }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Could not link the email");
+      }
+    },
+    [keys],
+  );
+
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setKeys(null);
@@ -248,7 +268,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ status, user, keys, register, login, unlock, changePassword, logout }}
+      value={{ status, user, keys, register, login, unlock, changePassword, bindEmailRecovery, logout }}
     >
       {children}
     </SessionContext.Provider>

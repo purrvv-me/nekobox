@@ -51,6 +51,36 @@ export const recoverResetSchema = z.object({
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
+// ─── Optional email recovery ──────────────────────────────────────────
+export const emailRecoveryBindSchema = z.object({
+  email: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
+  erk: z.string().min(1),
+  emailWrappedVmk: z.string().min(1),
+  emailWrappedVmkIv: z.string().min(1),
+});
+
+export const emailRecoveryRequestSchema = z.object({
+  email: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
+});
+
+export const emailRecoveryTokenSchema = z.object({
+  token: z.string().min(1).max(4096),
+});
+
+// Complete = ticket + full replacement password/recovery material built
+// client-side after unwrapping the VMK with the released ERK.
+export const emailRecoveryCompleteSchema = z.object({
+  token: z.string().min(1).max(4096),
+  newPassword: z.string().min(8).max(1024),
+  kdfSalt: z.string().min(1),
+  kdfIterations: z.number().int().min(100_000).max(10_000_000),
+  wrappedVmk: z.string().min(1),
+  wrappedVmkIv: z.string().min(1),
+  recoverySalt: z.string().min(1),
+  recoveryWrappedVmk: z.string().min(1),
+  recoveryWrappedVmkIv: z.string().min(1),
+});
+
 export const presignSchema = z.object({
   mimeType: z.string().min(1).max(255),
   size: z.number().int().positive(),
