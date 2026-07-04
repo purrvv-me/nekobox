@@ -191,7 +191,7 @@ app.get(
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Length", String(file.size));
     res.setHeader("X-Enc-Name", file.encName);
-    readBlob(file.vaultId, file.id).pipe(res);
+    (await readBlob(file.vaultId, file.id)).pipe(res);
   }),
 );
 
@@ -327,7 +327,7 @@ app.get(
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Length", String(s.size));
     res.setHeader("X-Enc-Name", s.encName);
-    shareBlobStream(s.id).pipe(res);
+    (await shareBlobStream(s.id)).pipe(res);
   }),
 );
 

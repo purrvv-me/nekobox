@@ -1,6 +1,12 @@
-// Dumb persistence: encrypted blobs on disk + opaque metadata in a JSON file.
-// The server never inspects blob contents and stores no secrets — only a
-// vault's PUBLIC auth key, plus per-file metadata (encrypted name, size, time).
+// Dumb persistence: encrypted blobs + opaque metadata in a JSON file. The
+// server never inspects blob contents and stores no secrets — only a vault's
+// PUBLIC auth key, plus per-file metadata (encrypted name, size, time).
+//
+// Blob bodies live in Backblaze B2 (S3-compatible) when B2_* env vars are
+// configured — see src/b2.ts — with local disk as the ONLY-for-development
+// fallback when they aren't. Metadata (meta.json) always lives on local disk
+// regardless of where blob bodies live; it's tiny, and moving it to object
+// storage would add latency/cost for no benefit at this scale.
 
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, open as fsOpen, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -8,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
+import { isB2Configured, b2Store } from "./b2.js";
 
 const DATA_DIR = fileURLToPath(new URL("../data", import.meta.url));
 const BLOB_DIR = join(DATA_DIR, "blobs");
@@ -211,7 +218,7 @@ export async function deleteShare(id: string): Promise<void> {
   await deleteBlob(SHARE_NS, id);
   await persist();
 }
-export function shareBlobStream(id: string): Readable {
+export function shareBlobStream(id: string): Promise<Readable> {
   return readBlob(SHARE_NS, id);
 }
 export function writeShareBlob(id: string, source: Readable): Promise<number> {
@@ -225,12 +232,20 @@ export async function sweepShares(): Promise<void> {
   }
 }
 
-// ─── blobs on disk ────────────────────────────────────────────────────
+// ─── blobs — B2 (primary, when configured) or local disk (dev fallback) ──
+// The same logical key (`<vaultId>/<fileId>`, or `__shares__/<shareId>`) is
+// used as an S3 object key on B2 and as a relative filesystem path locally,
+// so nothing above this layer needs to know which backend is active.
+function blobKey(vaultId: string, fileId: string): string {
+  return `${vaultId}/${fileId}`; // literal "/" — an S3 key, not a filesystem path
+}
 function blobPath(vaultId: string, fileId: string): string {
   return join(BLOB_DIR, vaultId, fileId);
 }
 
 export async function writeBlob(vaultId: string, fileId: string, source: Readable): Promise<number> {
+  if (isB2Configured()) return b2Store().putStream(blobKey(vaultId, fileId), source);
+
   const p = blobPath(vaultId, fileId);
   await mkdir(dirname(p), { recursive: true });
   await new Promise<void>((resolve, reject) => {
@@ -243,10 +258,17 @@ export async function writeBlob(vaultId: string, fileId: string, source: Readabl
   return (await stat(p)).size;
 }
 
-export function readBlob(vaultId: string, fileId: string): Readable {
+export async function readBlob(vaultId: string, fileId: string): Promise<Readable> {
+  if (isB2Configured()) return b2Store().getStream(blobKey(vaultId, fileId));
   return createReadStream(blobPath(vaultId, fileId));
 }
 
 export async function deleteBlob(vaultId: string, fileId: string): Promise<void> {
+  if (isB2Configured()) {
+    await b2Store()
+      .delete(blobKey(vaultId, fileId))
+      .catch(() => {}); // idempotent, like the local rm({force:true}) below
+    return;
+  }
   await rm(blobPath(vaultId, fileId), { force: true });
 }

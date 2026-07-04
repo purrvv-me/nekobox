@@ -11,16 +11,21 @@ A self-contained mini-project that builds on the **Stage 1** crypto module
 
 ```
 ┌────────── browser ──────────┐        ┌──────── server (dumb) ────────┐
-│  Stage 1 crypto (@secure)   │        │  blobs on disk (opaque)       │
-│  password → master key      │  HTTPS │  metadata: id, encName, size  │
-│  encrypt/ decrypt / names   │◀──────▶│  vault PUBLIC auth key only   │
-│  ECDSA auth key (wrapped)   │  token │  challenge / verify → token   │
+│  Stage 1 crypto (@secure)   │        │  blobs in B2 (opaque) —       │
+│  password → master key      │  HTTPS │    local disk = dev fallback  │
+│  encrypt/ decrypt / names   │◀──────▶│  metadata: id, encName, size  │
+│  ECDSA auth key (wrapped)   │  token │  vault PUBLIC auth key only   │
 └─────────────────────────────┘        └───────────────────────────────┘
 ```
 
+Blob bodies are stored in **Backblaze B2** (S3-compatible) when `B2_*` env vars
+are set — see [server/.env.example](server/.env.example) — with local disk as a
+development-only fallback. Metadata always lives in a local `data/meta.json`.
+
 ## What the server knows (and doesn't)
-- **Stores:** encrypted blobs, per-file metadata (`id`, encrypted `encName`,
-  `size`, `createdAt`), and each vault's **public** auth key.
+- **Stores:** encrypted blobs (B2, or local disk in dev), per-file metadata
+  (`id`, encrypted `encName`, `size`, `createdAt`, always local), and each
+  vault's **public** auth key.
 - **Never stores / sees:** passwords, master keys, plaintext, file contents,
   email/phone. It never parses or decrypts a blob.
 
@@ -87,6 +92,11 @@ status bar. Features:
 
 \* Sharing needs user accounts, which this dumb backend intentionally doesn't
 have — the menu item explains that.
+
+## Backups
+See [server/BACKUP.md](server/BACKUP.md) for how to snapshot the encrypted blob
+store (`npm run backup`), schedule it via cron, optionally sync it offsite to
+an S3-compatible bucket, and restore from a snapshot (`npm run restore`).
 
 ## Notes & limits (honest)
 - Metadata (size) is visible to the server; names are encrypted.
