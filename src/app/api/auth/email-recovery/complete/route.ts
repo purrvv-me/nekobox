@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { verifyRecoveryTicket } from "@/lib/recoveryTicket";
 import { emailRecoveryCompleteSchema } from "@/lib/validation";
+import { emailRecoveryEnabled } from "@/lib/featureFlags";
 import { ok, error } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -12,6 +13,8 @@ import { rateLimit } from "@/lib/rateLimit";
 // the jti in the WHERE clause), so a ticket can be spent exactly once. Nothing
 // from the body is trusted without that proof.
 export async function POST(req: NextRequest) {
+  if (!emailRecoveryEnabled()) return error("Email recovery is currently unavailable", 503);
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const limit = rateLimit(`emailcomplete:${ip}`, 5, 15 * 60 * 1000);
   if (!limit.ok) return error("Too many attempts. Try later.", 429);

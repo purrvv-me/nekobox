@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hashEmail } from "@/lib/recoveryTicket";
 import { emailRecoveryBindSchema } from "@/lib/validation";
+import { emailRecoveryEnabled } from "@/lib/featureFlags";
 import { ok, error, unauthorized } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -15,6 +16,8 @@ function emailHashKey(): string {
 // POST — link an email for recovery. Requires an ACTIVE session (the user has
 // already unlocked; the ERK material is produced client-side from the VMK).
 export async function POST(req: NextRequest) {
+  if (!emailRecoveryEnabled()) return error("Email recovery is currently unavailable", 503);
+
   const session = await getSession(req);
   if (!session) return unauthorized();
 
@@ -45,7 +48,9 @@ export async function POST(req: NextRequest) {
   return ok({ ok: true });
 }
 
-// DELETE — unlink email recovery entirely.
+// DELETE — unlink email recovery entirely. Intentionally NOT gated by the
+// feature flag: disabling new bindings shouldn't trap a user who wants to
+// remove their existing linkage.
 export async function DELETE(req: NextRequest) {
   const session = await getSession(req);
   if (!session) return unauthorized();

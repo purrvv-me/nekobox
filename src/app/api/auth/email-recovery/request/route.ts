@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashEmail, createRecoveryTicket } from "@/lib/recoveryTicket";
 import { sendRecoveryEmail } from "@/lib/mailer";
 import { emailRecoveryRequestSchema } from "@/lib/validation";
+import { emailRecoveryEnabled } from "@/lib/featureFlags";
 import { ok, error } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -16,6 +17,8 @@ function emailHashKey(): string {
 // the expensive work (HMAC + DB lookup) runs in both branches. The recovery
 // link travels ONLY via email — never in the HTTP response.
 export async function POST(req: NextRequest) {
+  if (!emailRecoveryEnabled()) return error("Email recovery is currently unavailable", 503);
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const limit = rateLimit(`emailreq:${ip}`, 5, 15 * 60 * 1000);
   if (!limit.ok) return error("Too many attempts. Try later.", 429);

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyRecoveryTicket } from "@/lib/recoveryTicket";
 import { emailRecoveryTokenSchema } from "@/lib/validation";
+import { emailRecoveryEnabled } from "@/lib/featureFlags";
 import { ok, error } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
 
@@ -9,6 +10,8 @@ import { rateLimit } from "@/lib/rateLimit";
 // email-recovery material. Does NOT consume the ticket: the jti is burned in
 // /complete, so a flaky network can't strand the user half-way.
 export async function POST(req: NextRequest) {
+  if (!emailRecoveryEnabled()) return error("Email recovery is currently unavailable", 503);
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const limit = rateLimit(`emailmat:${ip}`, 10, 15 * 60 * 1000);
   if (!limit.ok) return error("Too many attempts. Try later.", 429);
