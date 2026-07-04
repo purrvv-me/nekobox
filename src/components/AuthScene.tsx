@@ -1,5 +1,6 @@
 // Shared Windows-logon-style backdrop for login/register: dark gradient,
 // glowing constellation dots, centered brand mark + title + glass card.
+import Link from "next/link";
 import { BrandMark } from "./icons";
 
 export function AuthScene({
@@ -73,6 +74,16 @@ export function AuthScene({
           style={{ textShadow: "0 1px 6px rgba(0,0,0,0.25)" }}
         >
           {footer}
+        </p>
+
+        <p className="m-0 mt-3 text-center text-[11px] text-white/50">
+          <Link href="/terms" className="underline underline-offset-2 hover:text-white/80">
+            Terms
+          </Link>
+          <span className="mx-1.5">·</span>
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-white/80">
+            Privacy
+          </Link>
         </p>
       </div>
     </main>
