@@ -34,14 +34,14 @@ function bucket(): string {
 
 const SIGN_TTL = 300; // 5 minutes — long enough to up/download, short enough to be safe.
 
-/** Presigned PUT URL the browser uses to upload an encrypted blob directly. */
-export async function presignUpload(storageKey: string, contentType: string, maxBytes: number) {
-  const cmd = new PutObjectCommand({
-    Bucket: bucket(),
-    Key: storageKey,
-    ContentType: contentType,
-    ContentLength: maxBytes, // enforced server-side by R2
-  });
+/**
+ * Presigned PUT URL the browser uses to upload an encrypted blob directly.
+ * Content-Type / Content-Length are intentionally left unsigned so the browser's
+ * fixed `application/octet-stream` + real body length don't break the signature
+ * (they would if bound in, causing a 403). See b2.ts for the full rationale.
+ */
+export async function presignUpload(storageKey: string, _contentType: string, _maxBytes: number) {
+  const cmd = new PutObjectCommand({ Bucket: bucket(), Key: storageKey });
   return getSignedUrl(client(), cmd, { expiresIn: SIGN_TTL });
 }
 

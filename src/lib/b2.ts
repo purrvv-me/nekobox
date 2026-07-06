@@ -36,14 +36,17 @@ function bucket(): string {
 
 const SIGN_TTL = 300; // 5 minutes — long enough to up/download, short enough to be safe.
 
-/** Presigned PUT URL the browser uses to upload an encrypted blob directly. */
-export async function presignUpload(storageKey: string, contentType: string, maxBytes: number) {
-  const cmd = new PutObjectCommand({
-    Bucket: bucket(),
-    Key: storageKey,
-    ContentType: contentType,
-    ContentLength: maxBytes, // enforced server-side by B2
-  });
+/**
+ * Presigned PUT URL the browser uses to upload an encrypted blob directly.
+ * We deliberately do NOT bind Content-Type or Content-Length into the signature:
+ * doing so makes them *signed headers* the browser must reproduce byte-for-byte,
+ * but the client sends a fixed `application/octet-stream` and the real body
+ * length, which wouldn't match — S3/B2 then rejects the PUT with 403. The blob
+ * is opaque ciphertext, so its stored content-type is irrelevant, and upload
+ * size is validated separately when the file record is persisted.
+ */
+export async function presignUpload(storageKey: string, _contentType: string, _maxBytes: number) {
+  const cmd = new PutObjectCommand({ Bucket: bucket(), Key: storageKey });
   return getSignedUrl(client(), cmd, { expiresIn: SIGN_TTL });
 }
 
