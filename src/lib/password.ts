@@ -1,4 +1,5 @@
 import { argon2id, argon2Verify } from "hash-wasm";
+import { randomBytes } from "node:crypto";
 
 // Argon2id password hashing + verification via hash-wasm (WebAssembly — no
 // native binaries, so it loads identically in local dev, serverless functions
@@ -9,8 +10,11 @@ import { argon2id, argon2Verify } from "hash-wasm";
 // 19 MiB memory, 2 passes, single lane — same cost as the previous argon2id.
 const PARAMS = { parallelism: 1, iterations: 2, memorySize: 19456, hashLength: 32 } as const;
 
+// Use Node's crypto directly instead of the global `crypto`: Netlify Functions
+// can run on a Node version where `globalThis.crypto` isn't defined, and the
+// previous native argon2 generated its own salt so this dependency is new.
 function randomSalt(): Uint8Array {
-  return crypto.getRandomValues(new Uint8Array(16));
+  return new Uint8Array(randomBytes(16));
 }
 
 export async function hashPassword(password: string): Promise<string> {
