@@ -19,7 +19,8 @@ export function buildCsp(nonce: string, opts: CspOptions): string {
 
   const connectSrc = [
     "'self'",
-    "https://*.r2.cloudflarestorage.com", // presigned R2 up/downloads
+    "https://*.backblazeb2.com", // presigned B2 up/downloads
+    "https://*.r2.cloudflarestorage.com", // presigned R2 up/downloads (also supported)
     ...(opts.connectSrc ?? []),
   ];
   if (!isProd) connectSrc.push("ws:"); // HMR websocket in dev

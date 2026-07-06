@@ -22,8 +22,9 @@ describe("Content-Security-Policy (H1)", () => {
     expect(dev).toContain("'unsafe-eval'");
   });
 
-  it("allows presigned R2 uploads in connect-src", () => {
-    expect(prod).toContain("connect-src 'self' https://*.r2.cloudflarestorage.com");
+  it("allows presigned B2 and R2 uploads in connect-src", () => {
+    expect(prod).toContain("https://*.backblazeb2.com");
+    expect(prod).toContain("https://*.r2.cloudflarestorage.com");
   });
 
   it("adds custom connect-src origins when provided", () => {

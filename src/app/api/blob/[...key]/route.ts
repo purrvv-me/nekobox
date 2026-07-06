@@ -1,10 +1,15 @@
 import { NextRequest } from "next/server";
-import { isR2Configured, readLocal, verifyLocalSig, writeLocal } from "@/lib/storage";
+import { isB2Configured, isR2Configured, readLocal, verifyLocalSig, writeLocal } from "@/lib/storage";
 
-// Local-storage blob endpoint (only active when R2 is NOT configured).
-// Access is gated by short-lived HMAC capability tokens issued server-side in
-// storage.ts — exactly like an R2 presigned URL, so shared downloads work
-// without leaking session ownership. Bodies are already client-encrypted.
+// Local-storage blob endpoint (only active when NEITHER B2 nor R2 is
+// configured). Access is gated by short-lived HMAC capability tokens issued
+// server-side in storage.ts — exactly like a B2/R2 presigned URL, so shared
+// downloads work without leaking session ownership. Bodies are already
+// client-encrypted.
+
+function cloudConfigured(): boolean {
+  return isB2Configured() || isR2Configured();
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +24,7 @@ function parse(req: NextRequest, key: string[]) {
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { key: string[] } }) {
-  if (isR2Configured()) return new Response("Not found", { status: 404 });
+  if (cloudConfigured()) return new Response("Not found", { status: 404 });
   const { key, exp, sig } = parse(req, params.key);
   if (!verifyLocalSig("put", key, exp, sig)) return new Response("Forbidden", { status: 403 });
 
@@ -32,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { key: string[
 }
 
 export async function GET(req: NextRequest, { params }: { params: { key: string[] } }) {
-  if (isR2Configured()) return new Response("Not found", { status: 404 });
+  if (cloudConfigured()) return new Response("Not found", { status: 404 });
   const { key, exp, sig } = parse(req, params.key);
   if (!verifyLocalSig("get", key, exp, sig)) return new Response("Forbidden", { status: 403 });
 
