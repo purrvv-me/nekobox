@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // argon2 is a native module — keep it external to the server bundle.
-  // (Next 14.2 uses experimental.serverComponentsExternalPackages; this was
-  // renamed to the top-level serverExternalPackages in Next 15.)
-  experimental: {
-    serverComponentsExternalPackages: ["argon2"],
-  },
+  // Password hashing now uses hash-wasm (pure WebAssembly), so there's no
+  // native module to keep external — it bundles and loads fine everywhere,
+  // including serverless functions.
 };
 
 module.exports = nextConfig;

@@ -3,10 +3,10 @@
 # and is not deployed here).
 #
 # @netlify/plugin-nextjs handles App Router SSR, API routes (as Netlify
-# Functions, Node.js runtime — needed for the native argon2 module and fs
-# access in server components) and middleware (as a Netlify Edge Function —
+# Functions, Node.js runtime) and middleware (as a Netlify Edge Function —
 # src/middleware.ts only uses Web Crypto + string building, no Node-only APIs,
-# so it's edge-compatible as-is).
+# so it's edge-compatible as-is). Password hashing uses hash-wasm (pure WASM),
+# so there are no native modules to bundle into the functions.
 
 [build]
   command = "npm run build"

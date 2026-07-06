@@ -67,9 +67,12 @@ describe("KDF (PBKDF2)", () => {
     await expect(open(k2, sealed)).rejects.toThrow();
   });
 
-  it("Argon2id is optional and reports availability", async () => {
-    expect(await isArgon2Available()).toBe(false); // hash-wasm not installed
-    await expect(deriveKeyArgon2id("pw", toBase64(bytes(16)))).rejects.toThrow(/Argon2id unavailable/);
+  it("Argon2id is available (hash-wasm) and derives a usable KEK", async () => {
+    expect(await isArgon2Available()).toBe(true); // hash-wasm is a dependency
+    const key = await deriveKeyArgon2id("pw", toBase64(randomBytes(16)));
+    // The derived key must be a working AES-GCM KEK (seal/open round-trips).
+    const sealed = await seal(key, utf8("secret"));
+    expect(fromUtf8(await open(key, sealed))).toBe("secret");
   });
 });
 

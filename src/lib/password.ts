@@ -1,18 +1,32 @@
-import argon2 from "argon2";
+import { argon2id, argon2Verify } from "hash-wasm";
 
-// Argon2id password hashing + verification (auth only; independent from the
-// PBKDF2 keys used for encryption). No Next/server coupling, so it's unit
-// testable in isolation.
+// Argon2id password hashing + verification via hash-wasm (WebAssembly — no
+// native binaries, so it loads identically in local dev, serverless functions
+// (Netlify/Vercel), and edge runtimes; the native `argon2` package failed to
+// load inside Netlify Functions). Auth only; independent from the PBKDF2 keys
+// used for encryption. No Next/server coupling, so it's unit testable.
 
-const ARGON2_OPTS = { type: argon2.argon2id, memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
+// 19 MiB memory, 2 passes, single lane — same cost as the previous argon2id.
+const PARAMS = { parallelism: 1, iterations: 2, memorySize: 19456, hashLength: 32 } as const;
+
+function randomSalt(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(16));
+}
 
 export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, ARGON2_OPTS);
+  return argon2id({
+    password,
+    salt: randomSalt(),
+    ...PARAMS,
+    // Standard PHC string ($argon2id$v=19$m=...$salt$hash); argon2Verify reads
+    // the params + salt back out of it, so verify only needs password + hash.
+    outputType: "encoded",
+  });
 }
 
 export async function verifyPassword(hash: string, password: string): Promise<boolean> {
   try {
-    return await argon2.verify(hash, password);
+    return await argon2Verify({ password, hash });
   } catch {
     return false;
   }
@@ -25,7 +39,7 @@ let dummyHashPromise: Promise<string> | null = null;
 export async function verifyPasswordDummy(password: string): Promise<void> {
   dummyHashPromise ??= hashPassword("nekobox-nonexistent-account-placeholder");
   try {
-    await argon2.verify(await dummyHashPromise, password);
+    await argon2Verify({ password, hash: await dummyHashPromise });
   } catch {
     /* result intentionally discarded */
   }
