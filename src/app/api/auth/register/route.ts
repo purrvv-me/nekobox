@@ -6,21 +6,6 @@ import { ok, error } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
-  // TEMPORARY diagnostic: with ?debug=1, surface the real error so we can see
-  // why registration 500s on Netlify. Remove once the root cause is fixed.
-  const debug = req.nextUrl.searchParams.get("debug") === "1";
-  try {
-    return await handleRegister(req);
-  } catch (err: any) {
-    console.error("register: uncaught", err);
-    if (debug) {
-      return error(`[debug] ${err?.name}: ${err?.message}\n${String(err?.stack).split("\n").slice(0, 4).join("\n")}`, 500);
-    }
-    return error("Registration failed.", 500);
-  }
-}
-
-async function handleRegister(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const limit = rateLimit(`register:${ip}`, 10, 60 * 60 * 1000);
   if (!limit.ok) return error("Too many accounts created. Try later.", 429);
