@@ -13,10 +13,20 @@ export function BrandMark({ size = 20, className }: { size?: number; className?:
       aria-hidden
     >
       <g fill="currentColor">
-        <ellipse cx="25.7" cy="25.8" rx="3.1" ry="3.55" transform="rotate(-16 25.7 25.8)" />
-        <ellipse cx="32" cy="24.15" rx="3.1" ry="3.65" />
-        <ellipse cx="38.3" cy="25.8" rx="3.1" ry="3.55" transform="rotate(16 38.3 25.8)" />
-        <path d="M24.85 33.35c0-4.75 3.8-8.25 7.15-8.25s7.15 3.5 7.15 8.25c0 2.95-2.38 4.5-5.1 4.5-.9 0-1.45-.28-2.05-.28s-1.15.28-2.05.28c-2.72 0-5.1-1.55-5.1-4.5Z" />
+        <g transform="rotate(-10 25.4 30)">
+          <ellipse cx="19.7" cy="24.9" rx="2.25" ry="3" transform="rotate(-18 19.7 24.9)" />
+          <ellipse cx="24.1" cy="22.9" rx="2.25" ry="3.1" transform="rotate(-7 24.1 22.9)" />
+          <ellipse cx="28.6" cy="22.9" rx="2.25" ry="3.1" transform="rotate(7 28.6 22.9)" />
+          <ellipse cx="33" cy="24.9" rx="2.25" ry="3" transform="rotate(18 33 24.9)" />
+          <path d="M21.35 33.45c0-4.25 3.3-7.35 5-7.35s5 3.1 5 7.35c0 2.38-1.9 3.6-3.88 3.6-.55 0-.8-.12-1.12-.12s-.57.12-1.12.12c-1.98 0-3.88-1.22-3.88-3.6Z" />
+        </g>
+        <g transform="rotate(10 38.6 30)">
+          <ellipse cx="31" cy="24.9" rx="2.25" ry="3" transform="rotate(-18 31 24.9)" />
+          <ellipse cx="35.4" cy="22.9" rx="2.25" ry="3.1" transform="rotate(-7 35.4 22.9)" />
+          <ellipse cx="39.9" cy="22.9" rx="2.25" ry="3.1" transform="rotate(7 39.9 22.9)" />
+          <ellipse cx="44.3" cy="24.9" rx="2.25" ry="3" transform="rotate(18 44.3 24.9)" />
+          <path d="M32.65 33.45c0-4.25 3.3-7.35 5-7.35s5 3.1 5 7.35c0 2.38-1.9 3.6-3.88 3.6-.55 0-.8-.12-1.12-.12s-.57.12-1.12.12c-1.98 0-3.88-1.22-3.88-3.6Z" />
+        </g>
       </g>
       <g stroke="currentColor" strokeWidth="4.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M13.8 26.6 32 16.8l18.2 9.8L32 36.45 13.8 26.6Z" />
