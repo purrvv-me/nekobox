@@ -1,30 +1,29 @@
 import { chipMeta, FileKind } from "@/lib/format";
 
-// NekoBox brand mark — an outlined open box with small paws, based on the
-// product logo. Uses currentColor so it adapts to dark and light surfaces.
+// NekoBox brand mark — a monochrome outline of the open-box logo. Uses
+// currentColor so the same glyph works on dark and light surfaces.
 export function BrandMark({ size = 20, className }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="4 8 56 56"
       fill="none"
       className={className}
       aria-hidden
     >
-      <g stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.2 9.35 12 5.85l7.8 3.5-7.8 3.75-7.8-3.75Z" />
-        <path d="M4.2 9.35v6.85c0 .75.43 1.44 1.1 1.77L12 21.15l6.7-3.18c.67-.33 1.1-1.02 1.1-1.77V9.35" />
-        <path d="M12 13.1v8.05" />
-        <path d="M4.2 9.35 2.65 12l7.4 3.6L12 13.1" />
-        <path d="M19.8 9.35 21.35 12l-7.4 3.6L12 13.1" />
-      </g>
       <g fill="currentColor">
-        <ellipse cx="9.05" cy="9.25" rx="0.92" ry="1.1" transform="rotate(-13 9.05 9.25)" />
-        <ellipse cx="10.8" cy="8.72" rx="0.88" ry="1.08" transform="rotate(-4 10.8 8.72)" />
-        <ellipse cx="13.2" cy="8.72" rx="0.88" ry="1.08" transform="rotate(4 13.2 8.72)" />
-        <ellipse cx="14.95" cy="9.25" rx="0.92" ry="1.1" transform="rotate(13 14.95 9.25)" />
-        <path d="M9.45 11.25c0-1.03.82-1.85 1.6-1.85.4 0 .68.24.95.56.27-.32.55-.56.95-.56.78 0 1.6.82 1.6 1.85 0 .82-.66 1.24-1.48 1.24-.47 0-.72-.15-1.07-.15s-.6.15-1.07.15c-.82 0-1.48-.42-1.48-1.24Z" />
+        <ellipse cx="25.7" cy="25.8" rx="3.1" ry="3.55" transform="rotate(-16 25.7 25.8)" />
+        <ellipse cx="32" cy="24.15" rx="3.1" ry="3.65" />
+        <ellipse cx="38.3" cy="25.8" rx="3.1" ry="3.55" transform="rotate(16 38.3 25.8)" />
+        <path d="M24.85 33.35c0-4.75 3.8-8.25 7.15-8.25s7.15 3.5 7.15 8.25c0 2.95-2.38 4.5-5.1 4.5-.9 0-1.45-.28-2.05-.28s-1.15.28-2.05.28c-2.72 0-5.1-1.55-5.1-4.5Z" />
+      </g>
+      <g stroke="currentColor" strokeWidth="4.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13.8 26.6 32 16.8l18.2 9.8L32 36.45 13.8 26.6Z" />
+        <path d="M13.8 26.6v17.05L32 54.2l18.2-10.55V26.6" />
+        <path d="M32 36.45V54.2" />
+        <path d="M13.8 26.6 7.5 34.95l16.35 8.65L32 36.45" />
+        <path d="M50.2 26.6 56.5 34.95 40.15 43.6 32 36.45" />
       </g>
     </svg>
   );
