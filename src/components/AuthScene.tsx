@@ -51,7 +51,7 @@ export function AuthScene({
               boxShadow: "0 12px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18)",
             }}
           >
-            <BrandMark size={44} />
+            <BrandMark size={60} />
           </div>
           <h1
             className="m-0 text-[26px] font-semibold tracking-[0.2px] text-white"

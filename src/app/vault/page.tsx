@@ -387,7 +387,7 @@ function VaultInner() {
         {/* TAB STRIP */}
         <div className="flex h-10 flex-shrink-0 items-end gap-0 bg-mica px-1.5">
           <div className="flex h-[33px] items-center gap-2 rounded-t-lg bg-win px-3" style={{ boxShadow: "0 -1px 0 #e3e7ee inset, 1px 0 0 #e3e7ee, -1px 0 0 #e3e7ee" }}>
-            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] text-white" style={{ background: "linear-gradient(160deg,#2a2a2a,#000)" }}><BrandMark size={11} /></span>
+            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] text-white" style={{ background: "linear-gradient(160deg,#2a2a2a,#000)" }}><BrandMark size={14} /></span>
             <span className="text-[12.5px] font-semibold text-ink">NekoBox Vault</span>
           </div>
           <div className="flex-1" />
@@ -419,7 +419,7 @@ function VaultInner() {
           <button onClick={() => setSelectedFolderId(null)} disabled={atRoot} title="Back" className="flex h-7 w-[30px] items-center justify-center rounded-md text-[15px] enabled:hover:bg-black/5 disabled:text-[#c4c8d0]">←</button>
           <button onClick={() => setSelectedFolderId(null)} disabled={atRoot} title="Up" className="flex h-7 w-[30px] items-center justify-center rounded-md text-[15px] enabled:hover:bg-black/5 disabled:text-[#c4c8d0]">↑</button>
           <div className="flex h-[30px] min-w-0 flex-1 items-center gap-1 rounded-md border border-line3 bg-field px-3">
-            <span className="mr-1 text-sub"><BrandMark size={13} /></span>
+            <span className="mr-1 text-sub"><BrandMark size={16} /></span>
             <button onClick={() => setSelectedFolderId(null)} className={`text-[12.5px] ${atRoot ? "font-semibold text-ink" : "text-sub hover:underline"}`}>Vault</button>
             {currentFolder && (<><span className="text-[12px] text-sub2">›</span><span className="truncate text-[12.5px] font-semibold text-ink">{currentFolder.name}</span></>)}
           </div>
@@ -643,7 +643,7 @@ function DetailsView({ folders, files, selectedIds, sort, dropFolderId, onSort, 
 function EmptyState({ onUpload, onNewFolder, inFolder }: { onUpload: () => void; onNewFolder?: () => void; inFolder: boolean }) {
   return (
     <div className="flex flex-col items-center px-5 py-16 text-center">
-      <div className="mb-3.5 text-[#c4c8d0]"><BrandMark size={46} /></div>
+      <div className="mb-3.5 text-[#c4c8d0]"><BrandMark size={58} /></div>
       <p className="m-0 mb-[7px] text-[15px] font-semibold text-ink">{inFolder ? "This folder is quiet…" : "Your vault is empty"}</p>
       <p className="m-0 mb-[18px] max-w-[300px] text-[12.5px] leading-[1.55] text-[#7a7a7a]">Upload a file{onNewFolder ? " or create a folder" : ""} — everything is encrypted right here before it leaves your device.</p>
       <div className="flex gap-2.5">

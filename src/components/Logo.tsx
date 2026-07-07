@@ -7,7 +7,7 @@ export function PawMark({ size = 26 }: { size?: number }) {
       className="flex flex-shrink-0 items-center justify-center rounded-[7px] bg-ink text-white"
       style={{ width: size, height: size }}
     >
-      <BrandMark size={size * 0.62} />
+      <BrandMark size={size * 0.78} />
     </div>
   );
 }
