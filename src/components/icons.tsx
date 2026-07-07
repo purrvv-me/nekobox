@@ -1,14 +1,31 @@
 import { chipMeta, FileKind } from "@/lib/format";
 
-// NekoBox brand mark — a minimal "secure box" with a keyhole. Uses
-// currentColor so it adapts to dark (avatar) and light (toolbar) surfaces.
+// NekoBox brand mark — an outlined open box with small paws, based on the
+// product logo. Uses currentColor so it adapts to dark and light surfaces.
 export function BrandMark({ size = 20, className }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3.5" y="5.5" width="17" height="14" rx="3" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M3.5 9.7h17" stroke="currentColor" strokeWidth="1.7" />
-      <circle cx="12" cy="13.8" r="1.5" fill="currentColor" />
-      <path d="M12 15v2.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden
+    >
+      <g stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4.2 9.35 12 5.85l7.8 3.5-7.8 3.75-7.8-3.75Z" />
+        <path d="M4.2 9.35v6.85c0 .75.43 1.44 1.1 1.77L12 21.15l6.7-3.18c.67-.33 1.1-1.02 1.1-1.77V9.35" />
+        <path d="M12 13.1v8.05" />
+        <path d="M4.2 9.35 2.65 12l7.4 3.6L12 13.1" />
+        <path d="M19.8 9.35 21.35 12l-7.4 3.6L12 13.1" />
+      </g>
+      <g fill="currentColor">
+        <ellipse cx="9.05" cy="9.25" rx="0.92" ry="1.1" transform="rotate(-13 9.05 9.25)" />
+        <ellipse cx="10.8" cy="8.72" rx="0.88" ry="1.08" transform="rotate(-4 10.8 8.72)" />
+        <ellipse cx="13.2" cy="8.72" rx="0.88" ry="1.08" transform="rotate(4 13.2 8.72)" />
+        <ellipse cx="14.95" cy="9.25" rx="0.92" ry="1.1" transform="rotate(13 14.95 9.25)" />
+        <path d="M9.45 11.25c0-1.03.82-1.85 1.6-1.85.4 0 .68.24.95.56.27-.32.55-.56.95-.56.78 0 1.6.82 1.6 1.85 0 .82-.66 1.24-1.48 1.24-.47 0-.72-.15-1.07-.15s-.6.15-1.07.15c-.82 0-1.48-.42-1.48-1.24Z" />
+      </g>
     </svg>
   );
 }
