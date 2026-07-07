@@ -45,13 +45,13 @@ export function AuthScene({
       <div className="w-full px-6" style={{ maxWidth: width }}>
         <div className="mb-5 flex flex-col items-center text-center">
           <div
-            className="mb-[15px] flex h-[88px] w-[88px] items-center justify-center rounded-[22px] text-white"
+            className="mb-[18px] flex h-[128px] w-[128px] items-center justify-center rounded-[32px] text-white"
             style={{
               background: "linear-gradient(160deg, #2a2a2a, #000)",
               boxShadow: "0 12px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18)",
             }}
           >
-            <BrandMark size={60} />
+            <BrandMark size={104} />
           </div>
           <h1
             className="m-0 text-[26px] font-semibold tracking-[0.2px] text-white"
