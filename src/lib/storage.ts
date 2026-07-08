@@ -17,6 +17,8 @@ import * as b2 from "./b2";
 
 const LOCAL_DIR = path.join(process.cwd(), ".storage");
 const SIGN_TTL_MS = 5 * 60 * 1000; // 5 minutes, matching the signed-URL TTL
+const CLOUD_STORAGE_NOT_CONFIGURED =
+  "Cloud storage is not configured. Set B2_* or R2_* environment variables.";
 
 export function isB2Configured(): boolean {
   const id = process.env.B2_ACCESS_KEY_ID;
@@ -41,6 +43,20 @@ export function isR2Configured(): boolean {
       (process.env.R2_ACCOUNT_ID || process.env.R2_ENDPOINT) &&
       !(process.env.R2_ACCOUNT_ID ?? "").startsWith("your-"),
   );
+}
+
+export function cloudStorageConfigured(): boolean {
+  return isB2Configured() || isR2Configured();
+}
+
+function assertLocalStorageAllowed(): void {
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_LOCAL_STORAGE !== "true") {
+    throw new Error(CLOUD_STORAGE_NOT_CONFIGURED);
+  }
+}
+
+export function isStorageConfigError(err: unknown): boolean {
+  return err instanceof Error && err.message === CLOUD_STORAGE_NOT_CONFIGURED;
 }
 
 // ─── Local signed-URL helpers (capability tokens, like R2 presigning) ────
@@ -105,36 +121,42 @@ export async function readLocal(key: string): Promise<Buffer | null> {
 export async function presignUpload(key: string, contentType: string, maxBytes: number) {
   if (isB2Configured()) return b2.presignUpload(key, contentType, maxBytes);
   if (isR2Configured()) return r2.presignUpload(key, contentType, maxBytes);
+  assertLocalStorageAllowed();
   return localUrl("put", key);
 }
 
 export async function presignDownload(key: string) {
   if (isB2Configured()) return b2.presignDownload(key);
   if (isR2Configured()) return r2.presignDownload(key);
+  assertLocalStorageAllowed();
   return localUrl("get", key);
 }
 
 export async function getObject(key: string): Promise<Uint8Array | null> {
   if (isB2Configured()) return b2.getObject(key);
   if (isR2Configured()) return r2.getObject(key);
+  assertLocalStorageAllowed();
   return readLocal(key);
 }
 
 export async function putObject(key: string, body: Uint8Array, contentType = "application/octet-stream") {
   if (isB2Configured()) return b2.putObject(key, body, contentType);
   if (isR2Configured()) return r2.putObject(key, body, contentType);
+  assertLocalStorageAllowed();
   await writeLocal(key, body);
 }
 
 export async function deleteObject(key: string) {
   if (isB2Configured()) return b2.deleteObject(key);
   if (isR2Configured()) return r2.deleteObject(key);
+  assertLocalStorageAllowed();
   await fs.rm(localPath(key), { force: true });
 }
 
 export async function headObject(key: string): Promise<{ size: number } | null> {
   if (isB2Configured()) return b2.headObject(key);
   if (isR2Configured()) return r2.headObject(key);
+  assertLocalStorageAllowed();
   try {
     const st = await fs.stat(localPath(key));
     return { size: st.size };

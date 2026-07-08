@@ -1,11 +1,13 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { isB2Configured, isR2Configured } from "./storage";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cloudStorageConfigured, isB2Configured, isR2Configured, presignUpload } from "./storage";
 
 const B2_VARS = ["B2_ACCESS_KEY_ID", "B2_SECRET_ACCESS_KEY", "B2_BUCKET", "B2_ENDPOINT"];
 const R2_VARS = ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_ACCOUNT_ID"];
 
 afterEach(() => {
   for (const v of [...B2_VARS, ...R2_VARS]) delete process.env[v];
+  delete process.env.ALLOW_LOCAL_STORAGE;
+  vi.unstubAllEnvs();
 });
 
 describe("isB2Configured", () => {
@@ -72,5 +74,15 @@ describe("B2 and R2 can be independently detected (B2 takes precedence in storag
     process.env.R2_ACCOUNT_ID = "abc123accountid";
     expect(isB2Configured()).toBe(true);
     expect(isR2Configured()).toBe(true);
+    expect(cloudStorageConfigured()).toBe(true);
+  });
+});
+
+describe("production storage configuration", () => {
+  it("fails closed instead of using local disk in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    await expect(presignUpload("user/file", "application/octet-stream", 10)).rejects.toThrow(
+      "Cloud storage is not configured",
+    );
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { headObject, deleteObject } from "@/lib/storage";
+import { deleteObject, headObject, isStorageConfigError } from "@/lib/storage";
 import { finalizeFileSchema } from "@/lib/validation";
 import { ok, error, unauthorized, forbidden } from "@/lib/http";
 
@@ -54,7 +54,13 @@ export async function POST(req: NextRequest) {
     if (!folder || folder.ownerId !== session.sub) return forbidden();
   }
 
-  const head = await headObject(d.storageKey);
+  let head: { size: number } | null;
+  try {
+    head = await headObject(d.storageKey);
+  } catch (err) {
+    if (isStorageConfigError(err)) return error((err as Error).message, 503);
+    return error("Could not verify uploaded object", 502);
+  }
   if (!head) return error("Uploaded object not found in storage", 409);
 
   const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 104857600);

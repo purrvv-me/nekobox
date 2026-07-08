@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { getSession } from "@/lib/auth";
-import { presignUpload } from "@/lib/storage";
+import { isStorageConfigError, presignUpload } from "@/lib/storage";
 import { presignSchema } from "@/lib/validation";
 import { ok, error, unauthorized } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
 
   // Key is namespaced under the user id so ownership is verifiable at finalize.
   const storageKey = `${session.sub}/${randomUUID()}`;
-  const uploadUrl = await presignUpload(storageKey, "application/octet-stream", parsed.data.size);
+  let uploadUrl: string;
+  try {
+    uploadUrl = await presignUpload(storageKey, "application/octet-stream", parsed.data.size);
+  } catch (err) {
+    if (isStorageConfigError(err)) return error((err as Error).message, 503);
+    return error("Could not create upload URL", 502);
+  }
 
   return ok({ storageKey, uploadUrl });
 }

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { ok, error, unauthorized, forbidden } from "@/lib/http";
 import { rateLimit } from "@/lib/rateLimit";
-import { putObject } from "@/lib/storage";
+import { isStorageConfigError, putObject } from "@/lib/storage";
 import { storageKeySchema } from "@/lib/validation";
 
 // Same-origin fallback for encrypted blob upload. The preferred path is still
@@ -38,7 +38,8 @@ export async function PUT(req: NextRequest) {
 
   try {
     await putObject(parsedKey.data, body, "application/octet-stream");
-  } catch {
+  } catch (err) {
+    if (isStorageConfigError(err)) return error((err as Error).message, 503);
     return error("Could not upload encrypted blob to storage", 502);
   }
 

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { presignDownload, deleteObject } from "@/lib/storage";
+import { deleteObject, isStorageConfigError, presignDownload } from "@/lib/storage";
 import { updateFileSchema } from "@/lib/validation";
 import { ok, error, unauthorized, notFound, forbidden } from "@/lib/http";
 
@@ -29,7 +29,13 @@ export async function GET(req: NextRequest, { params }: FileRouteContext) {
   if (!file) return notFound("File");
   if (file.ownerId !== session.sub) return forbidden();
 
-  const url = await presignDownload(file.storageKey);
+  let url: string;
+  try {
+    url = await presignDownload(file.storageKey);
+  } catch (err) {
+    if (isStorageConfigError(err)) return error((err as Error).message, 503);
+    return error("Could not create download URL", 502);
+  }
   return ok({
     url,
     mimeType: file.mimeType,
