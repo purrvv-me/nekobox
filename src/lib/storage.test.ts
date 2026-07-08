@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cloudStorageConfigured, isB2Configured, isR2Configured, presignUpload } from "./storage";
 
-const B2_VARS = ["B2_ACCESS_KEY_ID", "B2_SECRET_ACCESS_KEY", "B2_BUCKET", "B2_ENDPOINT"];
+const B2_VARS = ["B2_ACCESS_KEY_ID", "B2_SECRET_ACCESS_KEY", "B2_BUCKET", "B2_BUCKET_NAME", "B2_ENDPOINT"];
 const R2_VARS = ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "R2_ACCOUNT_ID"];
 
 afterEach(() => {
@@ -19,6 +19,14 @@ describe("isB2Configured", () => {
     process.env.B2_ACCESS_KEY_ID = "key123";
     process.env.B2_SECRET_ACCESS_KEY = "secret123";
     process.env.B2_BUCKET = "nekobox-vault";
+    process.env.B2_ENDPOINT = "https://s3.us-west-004.backblazeb2.com";
+    expect(isB2Configured()).toBe(true);
+  });
+
+  it("also accepts B2_BUCKET_NAME from Netlify-style configuration", () => {
+    process.env.B2_ACCESS_KEY_ID = "key123";
+    process.env.B2_SECRET_ACCESS_KEY = "secret123";
+    process.env.B2_BUCKET_NAME = "nekobox-vault";
     process.env.B2_ENDPOINT = "https://s3.us-west-004.backblazeb2.com";
     expect(isB2Configured()).toBe(true);
   });

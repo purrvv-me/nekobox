@@ -29,7 +29,7 @@ function client(): S3Client {
 }
 
 function bucket(): string {
-  const b = process.env.B2_BUCKET;
+  const b = process.env.B2_BUCKET ?? process.env.B2_BUCKET_NAME;
   if (!b) throw new Error("B2_BUCKET must be set.");
   return b;
 }

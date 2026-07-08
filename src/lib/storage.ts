@@ -22,12 +22,13 @@ const CLOUD_STORAGE_NOT_CONFIGURED =
 
 export function isB2Configured(): boolean {
   const id = process.env.B2_ACCESS_KEY_ID;
+  const bucket = process.env.B2_BUCKET ?? process.env.B2_BUCKET_NAME;
   return Boolean(
     id &&
       !id.startsWith("your-") &&
       process.env.B2_SECRET_ACCESS_KEY &&
       !process.env.B2_SECRET_ACCESS_KEY.startsWith("your-") &&
-      process.env.B2_BUCKET &&
+      bucket &&
       process.env.B2_ENDPOINT,
   );
 }
