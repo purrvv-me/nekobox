@@ -102,6 +102,6 @@ an S3-compatible bucket, and restore from a snapshot (`npm run restore`).
 - Metadata (size) is visible to the server; names are encrypted.
 - The token store and vault metadata are in-memory / a JSON file — fine for a
   demo, not for production (use a DB + object storage there).
-- Recovery reset can't cryptographically prove code knowledge (inherent to
-  zero-knowledge); real deployments should add email verification.
+- Recovery reset should verify the submitted VMK before replacing password
+  material; the main app does this with a VMK-encrypted verifier.
 - No TLS here — put it behind HTTPS in production (Web Crypto needs it anyway).

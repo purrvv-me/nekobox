@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
     recoveryWrappedVmk,
     recoveryWrappedVmkIv,
     kdfIterations,
+    vmkVerifier,
+    vmkVerifierIv,
   } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
@@ -41,6 +43,8 @@ export async function POST(req: NextRequest) {
         kdfIterations,
         wrappedVmk,
         wrappedVmkIv,
+        vmkVerifier,
+        vmkVerifierIv,
         recoverySalt,
         recoveryWrappedVmk,
         recoveryWrappedVmkIv,
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   const token = await createSessionToken({ sub: user.id, email: user.email });
-  setSessionCookie(token);
+  await setSessionCookie(token);
 
   return ok({ id: user.id, email: user.email }, { status: 201 });
 }

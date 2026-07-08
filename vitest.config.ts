@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   resolve: {
     alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
       // `server-only` is a Next build guard with no Node entry point; stub it so
       // server modules that import it (e.g. the mailer) can be unit-tested.
       "server-only": fileURLToPath(new URL("./test/empty-stub.ts", import.meta.url)),

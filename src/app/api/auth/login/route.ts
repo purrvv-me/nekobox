@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!user || !valid) return error("Invalid email or password", 401);
 
   const token = await createSessionToken({ sub: user.id, email: user.email });
-  setSessionCookie(token);
+  await setSessionCookie(token);
 
   // Return the wrapped key material the client needs to rebuild its keys.
   return ok({

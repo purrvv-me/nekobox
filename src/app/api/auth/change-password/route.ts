@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
       kdfIterations: d.kdfIterations,
       wrappedVmk: d.wrappedVmk,
       wrappedVmkIv: d.wrappedVmkIv,
+      ...(d.vmkVerifier && d.vmkVerifierIv
+        ? { vmkVerifier: d.vmkVerifier, vmkVerifierIv: d.vmkVerifierIv }
+        : {}),
     },
   });
 

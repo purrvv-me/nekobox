@@ -114,6 +114,18 @@ export async function presignDownload(key: string) {
   return localUrl("get", key);
 }
 
+export async function getObject(key: string): Promise<Uint8Array | null> {
+  if (isB2Configured()) return b2.getObject(key);
+  if (isR2Configured()) return r2.getObject(key);
+  return readLocal(key);
+}
+
+export async function putObject(key: string, body: Uint8Array, contentType = "application/octet-stream") {
+  if (isB2Configured()) return b2.putObject(key, body, contentType);
+  if (isR2Configured()) return r2.putObject(key, body, contentType);
+  await writeLocal(key, body);
+}
+
 export async function deleteObject(key: string) {
   if (isB2Configured()) return b2.deleteObject(key);
   if (isR2Configured()) return r2.deleteObject(key);

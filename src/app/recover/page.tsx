@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthScene } from "@/components/AuthScene";
 import {
+  createVmkVerifier,
   deriveKEK,
   DEFAULT_PBKDF2_ITERATIONS,
   deriveRecoveryKey,
@@ -54,6 +55,7 @@ export default function RecoverPage() {
       const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
       const newPwk = await deriveKEK(password, kdfSalt, kdfIterations);
       const wrappedVmk = await wrapVmk(newPwk, vmk);
+      const vmkVerifier = await createVmkVerifier(vmk);
 
       const resetRes = await fetch("/api/auth/recover-reset", {
         method: "POST",
@@ -65,6 +67,8 @@ export default function RecoverPage() {
           kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
+          vmkVerifier: vmkVerifier.ciphertext,
+          vmkVerifierIv: vmkVerifier.iv,
         }),
       });
       if (!resetRes.ok) {

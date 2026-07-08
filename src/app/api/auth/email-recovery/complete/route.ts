@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
       kdfIterations: d.kdfIterations,
       wrappedVmk: d.wrappedVmk,
       wrappedVmkIv: d.wrappedVmkIv,
+      vmkVerifier: d.vmkVerifier,
+      vmkVerifierIv: d.vmkVerifierIv,
       recoverySalt: d.recoverySalt,
       recoveryWrappedVmk: d.recoveryWrappedVmk,
       recoveryWrappedVmkIv: d.recoveryWrappedVmkIv,

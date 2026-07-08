@@ -46,8 +46,9 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
 }
 
 // ─── Cookie helpers ───────────────────────────────────────────────────
-export function setSessionCookie(token: string) {
-  cookies().set(COOKIE_NAME, token, {
+export async function setSessionCookie(token: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -56,8 +57,9 @@ export function setSessionCookie(token: string) {
   });
 }
 
-export function clearSessionCookie() {
-  cookies().set(COOKIE_NAME, "", {
+export async function clearSessionCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -73,7 +75,7 @@ export function clearSessionCookie() {
 export async function getSession(req?: NextRequest): Promise<SessionClaims | null> {
   const token = req
     ? req.cookies.get(COOKIE_NAME)?.value
-    : cookies().get(COOKIE_NAME)?.value;
+    : (await cookies()).get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verifySessionToken(token);
 }

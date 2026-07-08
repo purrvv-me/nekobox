@@ -6,6 +6,7 @@ const MAIL = { to: "user@example.com", subject: "hi", text: "body" };
 afterEach(() => {
   delete process.env.RESEND_API_KEY;
   delete process.env.MAIL_FROM;
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -16,6 +17,16 @@ describe("mailer transport selection", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     await sendMail(MAIL);
     expect(log).toHaveBeenCalledOnce();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("production mode without a provider fails closed", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    await expect(sendMail(MAIL)).rejects.toThrow("Mail provider is not configured.");
+    expect(log).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

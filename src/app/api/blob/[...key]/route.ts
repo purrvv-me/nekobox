@@ -23,9 +23,12 @@ function parse(req: NextRequest, key: string[]) {
   };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { key: string[] } }) {
+type BlobRouteContext = { params: Promise<{ key: string[] }> };
+
+export async function PUT(req: NextRequest, { params }: BlobRouteContext) {
   if (cloudConfigured()) return new Response("Not found", { status: 404 });
-  const { key, exp, sig } = parse(req, params.key);
+  const { key: rawKey } = await params;
+  const { key, exp, sig } = parse(req, rawKey);
   if (!verifyLocalSig("put", key, exp, sig)) return new Response("Forbidden", { status: 403 });
 
   const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 104857600);
@@ -36,9 +39,10 @@ export async function PUT(req: NextRequest, { params }: { params: { key: string[
   return new Response(null, { status: 200 });
 }
 
-export async function GET(req: NextRequest, { params }: { params: { key: string[] } }) {
+export async function GET(req: NextRequest, { params }: BlobRouteContext) {
   if (cloudConfigured()) return new Response("Not found", { status: 404 });
-  const { key, exp, sig } = parse(req, params.key);
+  const { key: rawKey } = await params;
+  const { key, exp, sig } = parse(req, rawKey);
   if (!verifyLocalSig("get", key, exp, sig)) return new Response("Forbidden", { status: 403 });
 
   const data = await readLocal(key);

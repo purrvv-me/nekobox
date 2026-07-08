@@ -29,6 +29,11 @@ model User {
   wrappedVmk   String
   wrappedVmkIv String
 
+  // Fixed verifier encrypted under the VMK. It lets recovery/reset endpoints
+  // prove a submitted wrapped VMK is the real existing VMK without learning it.
+  vmkVerifier   String?
+  vmkVerifierIv String?
+
   // PBKDF2 iterations used for THIS user's password key. Stored per-user so the
   // cost can be raised for new accounts (default 600k) without breaking existing
   // ones. Defaults to 200000 for rows created before this field existed.

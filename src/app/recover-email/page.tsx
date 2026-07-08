@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AuthScene } from "@/components/AuthScene";
 import { RecoveryCodeModal } from "@/components/RecoveryCodeModal";
 import {
+  createVmkVerifier,
   deriveKEK,
   DEFAULT_PBKDF2_ITERATIONS,
   deriveRecoveryKey,
@@ -51,6 +52,7 @@ function RecoverEmailInner() {
       const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
       const pwk = await deriveKEK(password, kdfSalt, kdfIterations);
       const wrappedVmk = await wrapVmk(pwk, vmk);
+      const vmkVerifier = await createVmkVerifier(vmk);
 
       const code = generateRecoveryCode();
       const recoverySalt = newSaltB64();
@@ -68,6 +70,8 @@ function RecoverEmailInner() {
           kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
+          vmkVerifier: vmkVerifier.ciphertext,
+          vmkVerifierIv: vmkVerifier.iv,
           recoverySalt,
           recoveryWrappedVmk: recoveryWrapped.ciphertext,
           recoveryWrappedVmkIv: recoveryWrapped.iv,

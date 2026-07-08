@@ -142,9 +142,10 @@ The static landing page in [`/docs`](docs/index.html) is what GitHub Pages serve
 - R2 bucket must be **private**; blobs are reachable only via 5-minute signed URLs.
 - The rate limiter is **in-memory** (single-instance). For a cluster, back it with
   Redis.
-- **Recovery reset** can't cryptographically prove recovery-code knowledge
-  (that's inherent to zero-knowledge); worst case is password-material vandalism,
-  not data disclosure. A production build should add email verification.
+- **Recovery reset** verifies the submitted VMK before replacing password
+  material. Accounts created before the verifier existed use one encrypted
+  file/folder name as a legacy proof; empty legacy vaults should rotate their
+  recovery material after signing in.
 - Metadata (file size, MIME type) is stored in plaintext for listing/quotas.
 - Revoking a share stops future access but can't recall a copy already decrypted.
 

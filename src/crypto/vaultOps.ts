@@ -44,6 +44,73 @@ async function asJson(res: Response) {
   return res.json();
 }
 
+async function responseDetail(res: Response): Promise<string> {
+  const text = await res.text().catch(() => "");
+  const trimmed = text.trim().replace(/\s+/g, " ").slice(0, 240);
+  return trimmed ? `${res.status} ${res.statusText}: ${trimmed}` : `${res.status} ${res.statusText}`;
+}
+
+async function uploadCiphertext(
+  uploadUrl: string,
+  storageKey: string,
+  blob: Blob,
+): Promise<void> {
+  let directFailure = "";
+  try {
+    const put = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: blob,
+    });
+    if (put.ok) return;
+    directFailure = await responseDetail(put);
+  } catch (err) {
+    directFailure = err instanceof Error ? err.message : "browser PUT failed";
+  }
+
+  const fallback = await fetch("/api/files/upload", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "X-NekoBox-Storage-Key": storageKey,
+    },
+    body: blob,
+  }).catch((err) => {
+    throw new Error(
+      `Upload to storage failed. Direct PUT failed (${directFailure}); fallback request failed (${err instanceof Error ? err.message : "request failed"}).`,
+    );
+  });
+
+  if (!fallback.ok) {
+    throw new Error(
+      `Upload to storage failed. Direct PUT failed (${directFailure}); fallback failed (${await responseDetail(fallback)}).`,
+    );
+  }
+}
+
+async function fetchCiphertext(downloadUrl: string, fileId: string): Promise<ArrayBuffer> {
+  let directFailure = "";
+  try {
+    const res = await fetch(downloadUrl);
+    if (res.ok) return res.arrayBuffer();
+    directFailure = await responseDetail(res);
+  } catch (err) {
+    directFailure = err instanceof Error ? err.message : "browser GET failed";
+  }
+
+  const fallback = await fetch(`/api/files/${fileId}/blob`, { cache: "no-store" }).catch((err) => {
+    throw new Error(
+      `Could not fetch encrypted blob. Direct GET failed (${directFailure}); fallback request failed (${err instanceof Error ? err.message : "request failed"}).`,
+    );
+  });
+  if (!fallback.ok) {
+    throw new Error(
+      `Could not fetch encrypted blob. Direct GET failed (${directFailure}); fallback failed (${await responseDetail(fallback)}).`,
+    );
+  }
+  return fallback.arrayBuffer();
+}
+
 // ─── List + decrypt names ─────────────────────────────────────────────
 export async function listVault(masterKey: CryptoKey): Promise<DecryptedFile[]> {
   const { files } = await asJson(await fetch("/api/files", { cache: "no-store" }));
@@ -156,13 +223,9 @@ export async function uploadFile(
     }),
   );
 
-  // 3. Upload the ciphertext straight to R2.
-  const put = await fetch(presign.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": "application/octet-stream" },
-    body: blob,
-  });
-  if (!put.ok) throw new Error("Upload to storage failed");
+  // 3. Upload the ciphertext. Prefer direct-to-storage; fall back to same-origin
+  // server upload when a bucket rejects browser PUTs (most commonly CORS).
+  await uploadCiphertext(presign.uploadUrl, presign.storageKey, blob);
 
   // 4. Wrap the DEK + encrypt the filename under the master key, then persist.
   const wrappedDek = await wrapDekWithMaster(masterKey, dek);
@@ -197,9 +260,7 @@ export async function downloadAndDecrypt(
     ciphertext: meta.wrappedDek,
     iv: meta.wrappedDekIv,
   });
-  const res = await fetch(meta.url);
-  if (!res.ok) throw new Error("Could not fetch encrypted blob");
-  const ciphertext = await res.arrayBuffer();
+  const ciphertext = await fetchCiphertext(meta.url, fileId);
   const plaintext = await decryptFileChunked(dek, ciphertext, meta.contentIv, meta.chunkSize);
   return { blob: new Blob([plaintext], { type: meta.mimeType }), mimeType: meta.mimeType };
 }

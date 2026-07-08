@@ -2,7 +2,9 @@ import "server-only";
 
 // Pluggable mail transport.
 //   • RESEND_API_KEY set  → send via the Resend HTTP API.
-//   • otherwise (dev)     → log the message to the server console.
+//   • otherwise (dev/test) → log the message to the server console.
+//   • production without a provider fails closed so recovery links never land
+//     in hosted server logs.
 // Call sites (sendRecoveryEmail) don't change when you switch providers.
 //
 // The recovery link is a secret: it is only ever delivered through this
@@ -26,7 +28,11 @@ export function mailFrom(): string {
 }
 
 export async function sendMail(mail: Mail): Promise<void> {
-  return isResendConfigured() ? sendViaResend(mail) : sendViaConsole(mail);
+  if (isResendConfigured()) return sendViaResend(mail);
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Mail provider is not configured.");
+  }
+  return sendViaConsole(mail);
 }
 
 async function sendViaConsole(mail: Mail): Promise<void> {

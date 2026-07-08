@@ -42,6 +42,7 @@ export interface Sealed {
 }
 const toSecure = (s: Sealed): SecureSealed => ({ ct: s.ciphertext, iv: s.iv });
 const fromSecure = (s: SecureSealed): Sealed => ({ ciphertext: s.ct, iv: s.iv });
+const VMK_VERIFIER_TEXT = "nekobox-vmk-verifier-v1";
 
 // ─── Master key derivation (PBKDF2) ───────────────────────────────────
 export const DEFAULT_PBKDF2_ITERATIONS = DEFAULT_PBKDF2.iterations; // 600k
@@ -68,6 +69,10 @@ export async function wrapVmk(kek: CryptoKey, vmk: CryptoKey): Promise<Sealed> {
 
 export async function unwrapVmk(kek: CryptoKey, sealed: Sealed): Promise<CryptoKey> {
   return unwrapKey(kek, toSecure(sealed), /* extractable (re-wrap on pw change) */ true);
+}
+
+export async function createVmkVerifier(vmk: CryptoKey): Promise<Sealed> {
+  return fromSecure(await seal(vmk, utf8(VMK_VERIFIER_TEXT)));
 }
 
 // ─── Recovery code ────────────────────────────────────────────────────

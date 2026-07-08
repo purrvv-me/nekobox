@@ -6,19 +6,19 @@ afterEach(() => {
 });
 
 describe("emailRecoveryEnabled", () => {
-  it("defaults to enabled when unset", () => {
-    expect(emailRecoveryEnabled()).toBe(true);
-  });
-
-  it("is disabled only when explicitly set to the string 'false'", () => {
-    process.env.ENABLE_EMAIL_RECOVERY = "false";
+  it("defaults to disabled when unset", () => {
     expect(emailRecoveryEnabled()).toBe(false);
   });
 
-  it("stays enabled for any other value (true/1/empty string/etc.)", () => {
-    for (const v of ["true", "1", "", "FALSE", "no"]) {
+  it("is enabled only when explicitly set to the string 'true'", () => {
+    process.env.ENABLE_EMAIL_RECOVERY = "true";
+    expect(emailRecoveryEnabled()).toBe(true);
+  });
+
+  it("stays disabled for any other value", () => {
+    for (const v of ["false", "1", "", "TRUE", "yes"]) {
       process.env.ENABLE_EMAIL_RECOVERY = v;
-      expect(emailRecoveryEnabled()).toBe(true);
+      expect(emailRecoveryEnabled()).toBe(false);
     }
   });
 });

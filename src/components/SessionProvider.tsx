@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   createEmailRecoveryMaterial,
+  createVmkVerifier,
   deriveKEK,
   DEFAULT_PBKDF2_ITERATIONS,
   generateVmk,
@@ -109,6 +110,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const pwk = await deriveKEK(password, kdfSalt, kdfIterations);
     const vmk = await generateVmk();
     const wrappedVmk = await wrapVmk(pwk, vmk);
+    const vmkVerifier = await createVmkVerifier(vmk);
 
     const recoveryCode = generateRecoveryCode();
     const recoverySalt = newSaltB64();
@@ -125,6 +127,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         kdfIterations,
         wrappedVmk: wrappedVmk.ciphertext,
         wrappedVmkIv: wrappedVmk.iv,
+        vmkVerifier: vmkVerifier.ciphertext,
+        vmkVerifierIv: vmkVerifier.iv,
         recoverySalt,
         recoveryWrappedVmk: recoveryWrappedVmk.ciphertext,
         recoveryWrappedVmkIv: recoveryWrappedVmk.iv,
@@ -197,6 +201,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const kdfIterations = DEFAULT_PBKDF2_ITERATIONS;
       const newPwk = await deriveKEK(newPassword, kdfSalt, kdfIterations);
       const wrappedVmk = await wrapVmk(newPwk, keys.masterKey);
+      const vmkVerifier = await createVmkVerifier(keys.masterKey);
 
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
@@ -208,6 +213,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           kdfIterations,
           wrappedVmk: wrappedVmk.ciphertext,
           wrappedVmkIv: wrappedVmk.iv,
+          vmkVerifier: vmkVerifier.ciphertext,
+          vmkVerifierIv: vmkVerifier.iv,
         }),
       });
       if (!res.ok) {

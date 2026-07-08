@@ -57,6 +57,12 @@ export async function POST(req: NextRequest) {
   const head = await headObject(d.storageKey);
   if (!head) return error("Uploaded object not found in storage", 409);
 
+  const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 104857600);
+  if (head.size > maxBytes) {
+    await deleteObject(d.storageKey).catch(() => {});
+    return error(`File exceeds max size of ${maxBytes} bytes`, 413);
+  }
+
   // Enforce a per-user storage quota (counts encrypted blob sizes).
   const quota = Number(process.env.MAX_VAULT_BYTES ?? 15 * 1024 * 1024 * 1024);
   const agg = await prisma.file.aggregate({

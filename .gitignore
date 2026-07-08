@@ -4,6 +4,7 @@ out
 .env
 .env.local
 *.log
+.npm-audit-cache*
 .DS_Store
 prisma/dev.db
 .storage

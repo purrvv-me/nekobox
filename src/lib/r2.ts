@@ -45,10 +45,32 @@ export async function presignUpload(storageKey: string, _contentType: string, _m
   return getSignedUrl(client(), cmd, { expiresIn: SIGN_TTL });
 }
 
+/** Server-side fallback upload for browsers blocked by bucket CORS. */
+export async function putObject(storageKey: string, body: Uint8Array, contentType = "application/octet-stream") {
+  await client().send(
+    new PutObjectCommand({
+      Bucket: bucket(),
+      Key: storageKey,
+      Body: body,
+      ContentLength: body.byteLength,
+      ContentType: contentType,
+    }),
+  );
+}
+
 /** Presigned GET URL the browser uses to download an encrypted blob. */
 export async function presignDownload(storageKey: string) {
   const cmd = new GetObjectCommand({ Bucket: bucket(), Key: storageKey });
   return getSignedUrl(client(), cmd, { expiresIn: SIGN_TTL });
+}
+
+export async function getObject(storageKey: string): Promise<Uint8Array | null> {
+  try {
+    const res = await client().send(new GetObjectCommand({ Bucket: bucket(), Key: storageKey }));
+    return (await res.Body?.transformToByteArray()) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteObject(storageKey: string) {

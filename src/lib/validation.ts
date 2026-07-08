@@ -1,19 +1,25 @@
 import { z } from "zod";
 
+const encryptedField = z.string().min(1).max(8192);
+const shortCryptoField = z.string().min(1).max(512);
+export const storageKeySchema = z.string().min(1).max(512);
+
 const sealed = z.object({
-  ciphertext: z.string().min(1),
-  iv: z.string().min(1),
+  ciphertext: encryptedField,
+  iv: shortCryptoField,
 });
 
 export const registerSchema = z.object({
   email: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
   password: z.string().min(8).max(1024),
-  kdfSalt: z.string().min(1),
-  wrappedVmk: z.string().min(1),
-  wrappedVmkIv: z.string().min(1),
-  recoverySalt: z.string().min(1),
-  recoveryWrappedVmk: z.string().min(1),
-  recoveryWrappedVmkIv: z.string().min(1),
+  kdfSalt: shortCryptoField,
+  wrappedVmk: encryptedField,
+  wrappedVmkIv: shortCryptoField,
+  vmkVerifier: encryptedField,
+  vmkVerifierIv: shortCryptoField,
+  recoverySalt: shortCryptoField,
+  recoveryWrappedVmk: encryptedField,
+  recoveryWrappedVmkIv: shortCryptoField,
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
@@ -27,9 +33,11 @@ export const loginSchema = z.object({
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1).max(1024),
   newPassword: z.string().min(8).max(1024),
-  kdfSalt: z.string().min(1),
-  wrappedVmk: z.string().min(1),
-  wrappedVmkIv: z.string().min(1),
+  kdfSalt: shortCryptoField,
+  wrappedVmk: encryptedField,
+  wrappedVmkIv: shortCryptoField,
+  vmkVerifier: encryptedField.optional(),
+  vmkVerifierIv: shortCryptoField.optional(),
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
@@ -42,18 +50,20 @@ export const recoverMaterialSchema = z.object({
 export const recoverResetSchema = z.object({
   email: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
   newPassword: z.string().min(8).max(1024),
-  kdfSalt: z.string().min(1),
-  wrappedVmk: z.string().min(1),
-  wrappedVmkIv: z.string().min(1),
+  kdfSalt: shortCryptoField,
+  wrappedVmk: encryptedField,
+  wrappedVmkIv: shortCryptoField,
+  vmkVerifier: encryptedField,
+  vmkVerifierIv: shortCryptoField,
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
 });
 
 // ─── Optional email recovery ──────────────────────────────────────────
 export const emailRecoveryBindSchema = z.object({
   email: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
-  erk: z.string().min(1),
-  emailWrappedVmk: z.string().min(1),
-  emailWrappedVmkIv: z.string().min(1),
+  erk: encryptedField,
+  emailWrappedVmk: encryptedField,
+  emailWrappedVmkIv: shortCryptoField,
 });
 
 export const emailRecoveryRequestSchema = z.object({
@@ -69,13 +79,15 @@ export const emailRecoveryTokenSchema = z.object({
 export const emailRecoveryCompleteSchema = z.object({
   token: z.string().min(1).max(4096),
   newPassword: z.string().min(8).max(1024),
-  kdfSalt: z.string().min(1),
+  kdfSalt: shortCryptoField,
   kdfIterations: z.number().int().min(100_000).max(10_000_000),
-  wrappedVmk: z.string().min(1),
-  wrappedVmkIv: z.string().min(1),
-  recoverySalt: z.string().min(1),
-  recoveryWrappedVmk: z.string().min(1),
-  recoveryWrappedVmkIv: z.string().min(1),
+  wrappedVmk: encryptedField,
+  wrappedVmkIv: shortCryptoField,
+  vmkVerifier: encryptedField,
+  vmkVerifierIv: shortCryptoField,
+  recoverySalt: shortCryptoField,
+  recoveryWrappedVmk: encryptedField,
+  recoveryWrappedVmkIv: shortCryptoField,
 });
 
 export const presignSchema = z.object({
@@ -84,43 +96,43 @@ export const presignSchema = z.object({
 });
 
 export const finalizeFileSchema = z.object({
-  storageKey: z.string().min(1),
-  encName: z.string().min(1),
-  encNameIv: z.string().min(1),
+  storageKey: storageKeySchema,
+  encName: encryptedField,
+  encNameIv: shortCryptoField,
   mimeType: z.string().min(1).max(255),
-  wrappedDek: z.string().min(1),
-  wrappedDekIv: z.string().min(1),
-  contentIv: z.string().min(1),
+  wrappedDek: encryptedField,
+  wrappedDekIv: shortCryptoField,
+  contentIv: shortCryptoField,
   chunkSize: z.number().int().nonnegative().max(64 * 1024 * 1024),
-  folderId: z.string().min(1).nullish(),
+  folderId: z.string().min(1).max(128).nullish(),
 });
 
 export const createFolderSchema = z.object({
-  encName: z.string().min(1),
-  encNameIv: z.string().min(1),
+  encName: encryptedField,
+  encNameIv: shortCryptoField,
 });
 
 // Rename and/or move a file. folderId === null means "move to vault root";
 // undefined means "leave folder unchanged".
 export const updateFileSchema = z
   .object({
-    encName: z.string().min(1).optional(),
-    encNameIv: z.string().min(1).optional(),
-    folderId: z.string().min(1).nullish(),
+    encName: encryptedField.optional(),
+    encNameIv: shortCryptoField.optional(),
+    folderId: z.string().min(1).max(128).nullish(),
   })
   .refine((d) => d.encName !== undefined || d.folderId !== undefined, {
     message: "Nothing to update",
   });
 
 export const updateFolderSchema = z.object({
-  encName: z.string().min(1),
-  encNameIv: z.string().min(1),
+  encName: encryptedField,
+  encNameIv: shortCryptoField,
 });
 
 export const shareSchema = z.object({
   fileId: z.string().min(1),
   toEmail: z.string().email().max(254).transform((e) => e.toLowerCase().trim()),
-  rsaWrappedDek: z.string().min(1),
+  rsaWrappedDek: encryptedField,
   encName: sealed.shape.ciphertext,
   encNameIv: sealed.shape.iv,
 });

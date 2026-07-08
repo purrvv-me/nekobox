@@ -7,12 +7,15 @@ import { ok, error, unauthorized, notFound, forbidden } from "@/lib/http";
 
 // GET /api/files/:id — issue a signed download URL + the crypto metadata the
 // owner needs to decrypt locally.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+type FileRouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, { params }: FileRouteContext) {
   const session = await getSession(req);
   if (!session) return unauthorized();
+  const { id } = await params;
 
   const file = await prisma.file.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       ownerId: true,
       storageKey: true,
@@ -38,9 +41,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PATCH /api/files/:id — rename (encName) and/or move (folderId).
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: FileRouteContext) {
   const session = await getSession(req);
   if (!session) return unauthorized();
+  const { id } = await params;
 
   const body = await req.json().catch(() => null);
   const parsed = updateFileSchema.safeParse(body);
@@ -48,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const d = parsed.data;
 
   const file = await prisma.file.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { ownerId: true },
   });
   if (!file) return notFound("File");
@@ -64,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   await prisma.file.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(d.encName !== undefined ? { encName: d.encName, encNameIv: d.encNameIv } : {}),
       ...(d.folderId !== undefined ? { folderId: d.folderId } : {}),
@@ -75,19 +79,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/files/:id — remove from R2 and DB (cascades shares).
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: FileRouteContext) {
   const session = await getSession(req);
   if (!session) return unauthorized();
+  const { id } = await params;
 
   const file = await prisma.file.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { ownerId: true, storageKey: true },
   });
   if (!file) return notFound("File");
   if (file.ownerId !== session.sub) return forbidden();
 
   await deleteObject(file.storageKey).catch(() => {});
-  await prisma.file.delete({ where: { id: params.id } });
+  await prisma.file.delete({ where: { id } });
 
   return ok({ ok: true });
 }
