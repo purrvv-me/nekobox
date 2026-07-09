@@ -55,7 +55,8 @@ body {
   .w-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md text-[13px] font-medium
            transition-[background-color,transform] duration-150
-           disabled:cursor-not-allowed disabled:opacity-50;
+           disabled:cursor-not-allowed disabled:opacity-50
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#242424];
   }
   .w-btn-accent {
     @apply w-btn bg-accent font-semibold text-white hover:bg-accent-hover active:translate-y-px;
@@ -79,7 +80,8 @@ body {
 
   /* ─── Toolbar icon/pill helpers ───────────────────────────── */
   .w-toolbtn {
-    @apply flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink transition-colors;
+    @apply flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink transition-colors
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#242424];
   }
   .w-meta {
     @apply font-mono text-[10.5px] text-sub2;
